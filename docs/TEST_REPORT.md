@@ -1,68 +1,54 @@
-# Test report (upgrade)
+# Test report (final audit, 13 Nov 2026)
 
-Run on 13 Nov 2026 in a Linux workspace: Python 3.13, Node 20+, Chrome (system) for Playwright.
+Environment: Linux workspace, Python 3.13, Node 20+, system Chrome for Playwright.
+The user's MacBook Air also ran the suite before the audit fixes: **181 backend + 14 E2E passed** (after the
+one-worker fix). Re-run on the Mac after unzipping this version.
 
-## Summary
+## Final results
 
-| Suite | Before upgrade | After upgrade | Result |
-| --- | --- | --- | --- |
-| Backend (pytest) | 119 | **181** (119 original + 62 new) | **181 passed, 0 failed** |
-| End-to-end (Playwright, Pixel 7 size) | 6 | **14** (6 original + 8 new) | **14 passed, 0 failed** (run 3 times, stable) |
-| TypeScript type-check (`tsc --noEmit`) | pass | pass | pass |
-| Production build (`vite build`) | pass | pass | pass |
-
-**No existing test was deleted, weakened or skipped.** `git diff` on the old test files shows additions only:
-3 new tests in `test_invalid_inputs.py` (rule metadata) and one fixture in `conftest.py` that empties the
-rate-limit window before each test (the limiter itself stays on and is still tested by the API).
-
-## Backend tests by file
-
-| File | Tests | Covers |
+| Suite | Count | Result |
 | --- | --- | --- |
-| test_cancellation.py | 33 | refund slabs, exact boundaries, rule sets by date and category |
-| test_detector.py | 18 | situations, stale data, thresholds |
-| test_invalid_inputs.py | 17 | invalid inputs + **new**: rule metadata, unverified sources flagged |
-| test_explainer.py | 15 | LLM failures, validator, templates |
-| test_api.py | 12 | original API |
-| test_tdr_and_auto.py | 12 | TDR 3-hour rule, automatic refunds |
-| test_routing_ranking.py | 8 | Connection Scan, ranking |
-| test_scenarios_and_clock.py | 7 | the 4 original scenarios, clock |
-| **test_twin_transfer.py** | 14 | transfer class boundaries (−1, 0, 9, 10, 24, 25 min), required time by profile, infeasible alternatives dropped, "fewest changes" priority, twin states for missed / small delay / high-risk / senior / normal / cancelled, stale marking |
-| **test_whatif_decisions.py** | 9 | all 7 scenarios, deterministic output, options lost by waiting, hypothetical events never stored, not-applicable reasons, invalid parameters, counterfactuals only from calculated scenarios, resilience transparency |
-| **test_wallet_family.py** | 6 | wallet stages and rule metadata, no cancel estimate for an auto-refunded ticket, forward-only claim steps, export never guarantees, family divergence and together-first ranking, money from rules, labels only |
-| **test_offline_assistant_community.py** | 16 | masked offline card, 8 intents in EN / HI / Hinglish, answers from backend facts, stale data → no advice, an LLM cannot inject numbers, LLM failure fallback, duplicate reporters, confidence, conflict, expiry, phone/email rejected, **recommendations identical with and without reports** |
-| **test_api_upgrade.py** | 14 | every new endpoint, 404s, 422 validation (what-if ranges, priorities, profile, claim steps, assistant text/lang), preferences affect transfers, export download, old assessment fields kept, recommendation hidden when stale, seeded reports labelled, cancelled-train flow, early cancellation shown |
+| Backend (pytest) | **192** = 119 original + 62 upgrade + 11 audit | **192 passed, 0 failed, 0 skipped** |
+| End-to-end (Playwright, phone size, 1 worker) | **15** = 6 original + 8 upgrade + 1 audit | **15 passed** |
+| TypeScript check / production build | — | pass / pass |
+| Real HTTP server check (curl, `DEMO_TOKEN` set) | traversal URLs, demo token, headers | traversal returns the app page; demo 403 without token, 200 with; headers present |
 
-## End-to-end tests
+No existing test was deleted, skipped or weakened (`git diff` on old test files shows additions only).
 
-| # | Test | Status |
-| --- | --- | --- |
-| 1–6 | Original: normal journey, 3-hour edge, waitlisted family, missed connection in Hindi, invalid PNRs, stale data | pass (unchanged) |
-| 7 | Twin shows "Change not possible" → Options shows why + counterfactuals → What-If shows ₹455 and options lost after a long wait | pass |
-| 8 | Wallet: "You can file", announced-rule warning and version, mark as filed, history, export download | pass |
-| 9 | Family group: divergence, "Whole group" option first, split options labelled "Splits the group" | pass |
-| 10 | Offline card: masked PNR, save, **network switched off** → offline banner + saved card + 139 | pass |
-| 11 | Assistant: Hinglish question → ₹1,180 + TDR-LATE-3H + "rules engine", with no AI key; deadline chip → 17:10 | pass |
-| 12 | Community: "never change" notice, conflict shown, phone number rejected, report added, plans unchanged | pass |
-| 13 | Step-free + senior saved → transfer badges; resilience "Experimental" | pass |
-| 14 | Hindi on What-If and Wallet | pass |
+## Bugs found and fixed
 
-## Problems found while testing (and what was done)
+| # | Severity | Bug | Fix | Guarded by |
+| --- | --- | --- | --- | --- |
+| 1 | **Critical** | `GET /..%2F..%2FREADME.md` read any file on the server, including `backend/.env` | Serve only files inside `frontend/dist` | `test_no_file_outside_the_frontend_can_be_read` (4 URL forms) + curl |
+| 2 | High | Behind Render's proxy every user shared one rate limit → lockout during judging (found by reading code; not testable without Render) | `--proxy-headers` in Dockerfile; forget quiet addresses | `test_rate_limiter_forgets_quiet_addresses` |
+| 3 | High | Presenter endpoints open to anyone on a public link | Optional `DEMO_TOKEN` header; token box on presenter page | `test_demo_token_protects_presenter_endpoints` + curl |
+| 4 | High | Refund from an announced (not notified) rule shown as "Automatic"; assistant gave it without warning, added a TDR note to cancellations, and showed raw codes | "Estimate: rule not yet confirmed" pill; assistant warnings and plain words | 2 backend tests + E2E 15 |
+| 5 | Medium | One person could fake many station reporters with a header → "HIGH confidence" | One caller = one reporter | `test_one_caller_cannot_pretend_to_be_many_reporters` |
+| 6 | Medium | Core rule cited a Scribd upload | Statute text (Rule 13(1), 2015 Rules); govt publication for 2026 slabs | `test_rule_sources_are_not_file_sharing_sites_for_core_rules` |
+| 7 | Medium | No security headers; `render.yaml` CORS `*` | Headers on every response; CORS removed from render.yaml | `test_security_headers_on_every_response` |
+| 8 | Low | 0.74rem text; polling while tab hidden | Larger text; polling pauses when hidden | manual check (no test) |
+| 9 | (upgrade) | Cancellation known days early hidden as "not watching yet" | Report immediately | `test_cancellation_known_days_early_is_shown_immediately` |
+| 10 | (upgrade) | E2E tests clashed when run in parallel on the Mac | `workers: 1` | full E2E run |
 
-1. **Real bug:** a cancellation known days early showed "not watching yet". Fixed in the detector; regression test added.
-2. Many API calls from one IP in E2E tripped the 240/min rate limit. The Playwright server alone now starts with
-   `RATE_LIMIT_PER_MIN=5000`; the product default is unchanged.
-3. Two of my own new test inputs were wrong (a clock jump larger than the allowed 24 h, and a phrase that
-   contained a refund keyword). The tests were corrected, not the product.
-4. UI review from screenshots: the What-If column "vs best now" actually compared with the booked arrival, so it
-   was renamed; "Arrivals spread 0m" was hidden when some family members don't travel.
+## Core passenger scenarios (Phase 2)
 
-## Not tested / not verified
+| # | Scenario | Detection | Rights / money | Deadline | Ranking + why | Stale / missing data | Evidence |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | > 3 h late | LATE_OVER_3H | TDR ₹1,180 if approved (Rule 13(1)) | before actual departure 17:10 | TDR plans first for money | 170 min → TDR removed | E2E 2, 8, 11; backend TDR tests |
+| 2 | Missed connection | CONNECTION_AT_RISK, twin BROKEN | ₹455 if approved | 09:15, marked unverified | 90205+90601 first; why + counterfactuals | — | E2E 4, 7 |
+| 3 | WL after chart | WAITLISTED_AFTER_CHART | ₹2,140 automatic (₹60 clerkage × 4) | none needed | auto refund + alternative | — | E2E 3 |
+| 4 | Train cancelled | TRAIN_CANCELLED (even days early) | full refund automatic | — | alternatives | — | API tests |
+| 5 | Family on 2 PNRs | divergence | ₹4,830 together / ₹3,180 split | — | together first under FAMILY | — | E2E 9, backend family tests |
+| 6 | Wait vs cancel vs alternative | — | each from rules engine | per option | What-If 7 scenarios | — | E2E 7 |
+| 7 | Near a deadline | Rights Clock windows | — | decide-by time | — | — | Rights Clock tests |
+| 8 | Stale data | STALE_DATA | no TDR asserted | — | only "use official channel" | assistant refuses, What-If NO_SAFE_ADVICE | E2E 6, backend tests |
+| 9 | Offline card | — | masked snapshot | — | top 3 plans | labelled "not live" | E2E 10 |
+| 10 | Hindi/Hinglish | — | same numbers | — | — | — | E2E 11, 14; intent tests |
 
-- **Real voice input**: the speech-recognition button needs a real browser with a microphone; E2E covers text input
-  and checks the button is disabled where unsupported. Read-aloud uses `speechSynthesis` and was not heard in tests.
-- **Service worker reload offline**: E2E checks the saved card when the network drops on an open page. A full
-  cold reload while offline (app shell from the service worker) was not automated.
-- **Docker image**: `docker build` could not run here (no Docker daemon). Not verified.
-- **Deployment**: not deployed. No live URL exists.
-- Screen readers were not tested; buttons have labels and sizes ≥ 40–48 px.
+## Not tested / cannot be tested here
+
+- **Render deployment and Docker build** (no Docker daemon in this workspace; not deployed).
+- **Rate limiting behind a real proxy** (logic tested; proxy behaviour needs Render).
+- **Real microphone voice input and spoken output** (needs a phone/browser with mic). Text path is tested.
+- **Cold reload of the whole app while offline** (service worker). Saving and viewing the card offline is tested.
+- **Screen readers and real users** (no usability study was done).

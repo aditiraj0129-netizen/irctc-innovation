@@ -42,7 +42,7 @@ cd agla-kadam/backend
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-pytest                                  # expect: 181 passed
+pytest                                  # expect: 192 passed
 uvicorn app.main:app --reload           # API on http://localhost:8000  (docs: /docs)
 ```
 
@@ -63,8 +63,8 @@ FastAPI serves the built app at http://localhost:8000.
 
 | Suite | Command | What it covers |
 | --- | --- | --- |
-| Backend (181 tests: the original 119 + 62 new) | `cd backend && pytest` | Refund slabs and exact boundary times, rule versions by date and train category, the TDR 3-hour boundary, invalid inputs, the disruption detector, route search vs Connection Scan, ranking, the Rights Clock, LLM failures (timeout, bad JSON, invented numbers, promise wording), the API, the demo scenarios; plus the twin, transfer classes, what-if, counterfactuals, resilience, wallet stages and claims, family groups, offline card, assistant intents (EN/HI/Hinglish, stale data, LLM failure), community reports (duplicates, expiry, conflicts, personal data, no effect on recommendations) and every new endpoint |
-| End-to-end (14 tests: the original 6 + 8 new) | `cd frontend && npm run build && npx playwright install chromium && npm run test:e2e` | Full passenger journeys on a phone-sized screen, Hindi toggle, invalid PNRs, stale data; plus twin → options → what-if, wallet claim + export, family group, offline card with the network switched off, Hinglish assistant question, community reports, accessibility needs, Hindi on the new screens |
+| Backend (192 tests: the original 119 + 73 new) | `cd backend && pytest` | Refund slabs and exact boundary times, rule versions by date and train category, the TDR 3-hour boundary, invalid inputs, the disruption detector, route search vs Connection Scan, ranking, the Rights Clock, LLM failures (timeout, bad JSON, invented numbers, promise wording), the API, the demo scenarios; plus the twin, transfer classes, what-if, counterfactuals, resilience, wallet stages and claims, family groups, offline card, assistant intents (EN/HI/Hinglish, stale data, LLM failure), community reports (duplicates, expiry, conflicts, personal data, no effect on recommendations) and every new endpoint |
+| End-to-end (15 tests: the original 6 + 9 new) | `cd frontend && npm run build && npx playwright install chromium && npm run test:e2e` | Full passenger journeys on a phone-sized screen, Hindi toggle, invalid PNRs, stale data; plus twin → options → what-if, wallet claim + export, family group, offline card with the network switched off, Hinglish assistant question, community reports, accessibility needs, Hindi on the new screens, announced-rule refunds never shown as certain |
 
 Full results: [docs/TEST_REPORT.md](docs/TEST_REPORT.md). API: [docs/API.md](docs/API.md). Architecture: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Demo, pitch and comparison: [docs/DEMO_AND_PITCH.md](docs/DEMO_AND_PITCH.md).
 
@@ -138,19 +138,21 @@ The minimum transfer time (30 min) is our assumption, not an official figure.
 See `.env.example`. Key ones: `DEMO_MODE` (presenter endpoints on/off), `LLM_ENABLED`, `LLM_PROVIDER`
 (`anthropic` or `openai`-compatible), `LLM_MODEL`, `LLM_API_KEY`, `LLM_TIMEOUT_SECONDS`, `CORS_ORIGINS`, `RATE_LIMIT_PER_MIN`,
 `STORE_PATH` (SQLite file for claims, preferences and reports; default `:memory:`, so a restart clears them).
-Never put API keys in source code; set them in `backend/.env` (git-ignored) or the hosting dashboard.
+`DEMO_TOKEN` (optional; when set, the presenter page needs this token, so nobody else can change the demo on a public link).
+Never put API keys or the demo token in source code; set them in `backend/.env` (git-ignored) or the hosting dashboard.
 
 ## 6. Deploy (free tier)
 
 1. Push this folder to GitHub.
 2. On Render: **New → Blueprint**, select the repo. `render.yaml` builds the Dockerfile (frontend and backend in one service).
-3. Open `https://<your-app>.onrender.com`. Free instances sleep, so open the app 10 minutes before judging.
+3. In the Render dashboard, set `DEMO_TOKEN` to a secret word. Type it into the presenter page when asked.
+4. Open `https://<your-app>.onrender.com`. Free instances sleep, so open the app 10 minutes before judging.
 
 Local Docker test: `docker build -t agla-kadam . && docker run -p 8000:8000 agla-kadam`
 
 ## 7. Before you pitch: verify these
 
-- [ ] **April 2026 all-train refund slabs**: find the official notification. Until then they're badged "announced, not notified" (`RS-REG-2026-APR`).
+- [ ] **April 2026 all-train refund slabs**: a Govt of India publication (New India Samachar, PIB, Apr 2026) says they were introduced, but the Gazette text wasn't found. Until it is, the app labels them "announced, not yet confirmed" everywhere (`RS-REG-2026-APR`).
 - [ ] **2015 refund slabs**: check against the official PDF (`RS-REG-2015` has `last_verified: null`).
 - [ ] **Missed-connection TDR deadline** (3 h after arrival): currently from a partner help page.
 - [ ] **Vande Bharat Sleeper / Amrit Bharat II late-running refund**: the app deliberately says "check the official channel".
@@ -159,7 +161,7 @@ Local Docker test: `docker build -t agla-kadam . && docker run -p 8000:8000 agla
 
 ## 8. Demo checklist
 
-- [ ] `pytest` green (181) · `npm run test:e2e` green (14)
+- [ ] `pytest` green (192) · `npm run test:e2e` green (15)
 - [ ] Deployed app opened on the phone over mobile data
 - [ ] One run-through with `LLM_ENABLED=false`
 - [ ] Presenter panel reset between scenarios

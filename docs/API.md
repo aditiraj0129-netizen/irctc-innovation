@@ -3,7 +3,7 @@
 Base URL: `http://localhost:8000`. Interactive docs: `/docs` (FastAPI). All railway data is **SIMULATED**.
 Money is always in **paise** (₹1 = 100 paise). Times are ISO 8601 with the IST offset (`+05:30`).
 `{jid}` is a journey id such as `missed_connection`. Unknown ids return **404**; bad inputs return **422**.
-A per-IP rate limit (`RATE_LIMIT_PER_MIN`, default 240) returns **429**.
+A per-IP rate limit (`RATE_LIMIT_PER_MIN`, default 240) returns **429**. If `DEMO_TOKEN` is set, every `/api/demo/...` call needs the header `X-Demo-Token`, else **403**. Every response carries basic security headers.
 
 ## Original endpoints (unchanged)
 
@@ -30,7 +30,7 @@ A per-IP rate limit (`RATE_LIMIT_PER_MIN`, default 240) returns **429**.
 | GET | `/api/journeys/{jid}/offline-card` | Masked snapshot for offline use: `pnr_label` masked, `generated_at`, `stale_after` (+30 min), `data_label: SIMULATED_SNAPSHOT_NOT_LIVE`, legs, transfers, top 3 plans, rights, rules, instructions, emergency numbers |
 | POST | `/api/journeys/{jid}/assistant` `{text (1–300 chars), lang: en\|hi}` | `intent`, `intent_source` (keywords / llm / none), `answer`, `rule_ids`, `answer_source: RULES_ENGINE`. Refuses to advise when data is stale |
 | GET | `/api/journeys/{jid}/community/reports` | Active (non-expired) reports, each `label: UNVERIFIED_PASSENGER_REPORT`, `affects_recommendations: false` |
-| POST | `/api/journeys/{jid}/community/reports` `{station: 2–5 capital letters, type, train_no?, note? ≤120}` | Adds or merges a report. Optional header `X-Reporter` (hashed). Notes with phone numbers or emails → **422** |
+| POST | `/api/journeys/{jid}/community/reports` `{station: 2–5 capital letters, type, train_no?, note? ≤120}` | Adds or merges a report. One caller (network address, stored only as a hash) counts as one reporter; client headers can't add reporters. Notes with phone numbers or emails → **422** |
 | GET | `/api/groups` | Family groups |
 | GET | `/api/groups/{gid}?priority` (default `family`) | Group view: `divergence`, `group_profile`, member `timeline`, ranked `options` with `suitability` GROUP / INDIVIDUAL and `warnings` |
 | POST | `/api/demo/groups/{gid}/reset` | Resets every journey in the group (demo only) |

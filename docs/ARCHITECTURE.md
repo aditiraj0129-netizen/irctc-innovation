@@ -61,8 +61,16 @@ flowchart TD
 | Counterfactuals | `plan/counterfactual.py` | `components/RecommendationBox.tsx` |
 | Community | `community/reports.py` | `screens/CommunityScreen.tsx` |
 
-## Bug found and fixed during the upgrade
+## Security and deployment design (after the final audit)
 
-A cancellation known days ahead was hidden behind "not watching yet" because the detector only started
-watching 12 hours before departure. Known cancellations are now reported immediately
-(`detect/detector.py`, test `test_cancellation_known_days_early_is_shown_immediately`).
+- **Static files:** the server only serves files that are really inside `frontend/dist`; any `../` path gets the app page.
+- **Rate limit:** per caller address. In Docker, uvicorn runs with `--proxy-headers`, so behind Render's proxy each user is counted separately. Quiet addresses are forgotten.
+- **Presenter protection:** optional `DEMO_TOKEN` (set in the hosting dashboard). The presenter page sends it as `X-Demo-Token`; passenger endpoints never need it.
+- **Headers:** `nosniff`, `no-referrer`, `X-Frame-Options: DENY`, and `Permissions-Policy` allowing only the microphone (for voice).
+- **CORS:** not needed in production (one origin); only the local dev origin is allowed by default.
+- **Community reports:** one caller = one reporter (hashed address); client headers are ignored.
+- **Honest money labels:** if an amount depends on a rule with legal status ANNOUNCED, the UI shows "Estimate: rule not yet confirmed" (never "Automatic"), and the assistant adds a warning.
+
+## Bugs found and fixed
+
+See `docs/TEST_REPORT.md` for the full list with the test that guards each fix.
