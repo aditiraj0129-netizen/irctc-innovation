@@ -1,0 +1,136 @@
+# Agla Kadam rules data.
+# Every rule says WHERE it comes from, HOW STRONG that source is, and WHEN we last checked it.
+# Money is in paise (₹1 = 100 paise). Hours are counted back from the scheduled
+# departure at the passenger's boarding station.
+# Before the demo: re-check every rule whose last_verified is null or whose
+# strength is not "official".
+
+version: "2026-11-13"
+
+rule_sets:
+  - id: RS-REG-2015
+    name: "Railway Passengers (Cancellation of Ticket and Refund of Fare) Rules, 2015"
+    train_categories: [REGULAR]
+    effective_from: 2015-11-12
+    effective_to: 2026-03-31
+    legal_status: NOTIFIED
+    source:
+      title: "IRCTC refund rules w.e.f. 12 Nov 2015"
+      url: "https://mail.irtsa.net/pdfdocs/IRCTC-Refund-Rules-wef-12-Nov-2015.pdf"
+      strength: "official text (copy hosted by a third party)"
+      last_verified: null
+      note: "Slab boundaries taken from the 2015 rules as commonly published. Check the PDF before the demo."
+    flat_charge_paise: {"1A": 24000, "EC": 24000, "2A": 20000, "FC": 20000, "3A": 18000, "CC": 18000, "3E": 18000, "SL": 12000, "2S": 6000}
+    confirmed_slabs:
+      - {min_hours: 48, min_inclusive: false, type: FLAT}
+      - {min_hours: 12, min_inclusive: true, type: PERCENT, percent: 25, min_flat: true}
+      - {min_hours: 4, min_inclusive: true, type: PERCENT, percent: 50, min_flat: true}
+      - {min_hours: null, type: NO_REFUND}
+    clerkage_paise_per_passenger: 6000
+    rac_wl_cancel_cutoff_minutes: 30
+
+  - id: RS-REG-2026-APR
+    name: "Revised refund slabs for all trains (announced March 2026)"
+    train_categories: [REGULAR]
+    effective_from: 2026-04-01
+    effective_to: null
+    legal_status: ANNOUNCED
+    source:
+      title: "Railway Minister's announcement, reported 24-25 Mar 2026"
+      url: "https://www.deccanchronicle.com/nation/current-affairs/train-ticket-cancellation-charges-vaishnaw-announces-new-refund-slabs-1946010"
+      strength: "media report; official notification not found yet"
+      last_verified: 2026-11-13
+      note: "Rolled out in phases 1-15 Apr 2026. Replace the source with the Gazette/circular once found."
+    flat_charge_paise: {"1A": 24000, "EC": 24000, "2A": 20000, "FC": 20000, "3A": 18000, "CC": 18000, "3E": 18000, "SL": 12000, "2S": 6000}
+    confirmed_slabs:
+      - {min_hours: 72, min_inclusive: false, type: FLAT}
+      - {min_hours: 24, min_inclusive: true, type: PERCENT, percent: 25, min_flat: true}
+      - {min_hours: 8, min_inclusive: true, type: PERCENT, percent: 50, min_flat: true}
+      - {min_hours: null, type: NO_REFUND}
+    clerkage_paise_per_passenger: 6000
+    rac_wl_cancel_cutoff_minutes: 30
+
+  - id: RS-VBS-AB2-2026
+    name: "Amendment Rules 2026 for Vande Bharat Sleeper and Amrit Bharat II"
+    train_categories: [VANDE_BHARAT_SLEEPER, AMRIT_BHARAT_II]
+    effective_from: 2026-01-16
+    effective_to: null
+    legal_status: NOTIFIED
+    source:
+      title: "Gazette G.S.R. 41(E), 16 Jan 2026; Railway Board Commercial Circular 8 of 2026"
+      url: "https://indianrailways.gov.in/railwayboard/uploads/directorate/traffic_comm/Comm_Cir_2026/CC%208%20of%202026.pdf"
+      strength: "official"
+      last_verified: 2026-11-13
+      note: "Read through a search extract. No RAC or waitlist on these trains."
+    flat_charge_paise: {"1A": 24000, "2A": 20000, "3A": 18000}
+    confirmed_slabs:
+      - {min_hours: 72, min_inclusive: false, type: PERCENT, percent: 25}
+      - {min_hours: 8, min_inclusive: true, type: PERCENT, percent: 50}
+      - {min_hours: null, type: NO_REFUND}
+    allowed_statuses: [CONFIRMED]
+    allowed_quotas: [GENERAL]
+
+special_rules:
+  - id: TDR-LATE-3H
+    name: "Train late more than 3 hours and passenger did not travel"
+    train_categories: [REGULAR]
+    effective_from: 2015-11-12
+    legal_status: NOTIFIED
+    source:
+      title: "Refund Rules 2015, rule on late running; repeated on every IRCTC e-ticket"
+      url: "https://www.scribd.com/document/745883713/4-DEC-RGS-SL"
+      strength: "official text (seen in an e-ticket copy)"
+      last_verified: 2026-11-13
+      note: "Full fare, no clerkage, if the TDR is filed online before the train ACTUALLY departs."
+    params: {delay_threshold_minutes: 180}
+
+  - id: TDR-LATE-3H-VBS
+    name: "Late-running refund on Vande Bharat Sleeper / Amrit Bharat II"
+    train_categories: [VANDE_BHARAT_SLEEPER, AMRIT_BHARAT_II]
+    effective_from: 2026-01-16
+    legal_status: NOTIFIED
+    needs_verification: true
+    source:
+      title: "Gazette G.S.R. 41(E): proviso about cancelling or filing TDR up to 8 hours before departure"
+      url: "https://indianrailways.gov.in/railwayboard/uploads/directorate/traffic_comm/Comm_Cir_2026/CC%208%20of%202026.pdf"
+      strength: "official, but how it applies to late trains is unclear"
+      last_verified: 2026-11-13
+    params: {}
+
+  - id: AUTO-TRAIN-CANCELLED
+    name: "Train cancelled on its entire run (e-ticket)"
+    train_categories: [REGULAR, VANDE_BHARAT_SLEEPER, AMRIT_BHARAT_II]
+    effective_from: 2015-11-12
+    legal_status: NOTIFIED
+    source:
+      title: "E-ticket rules: full refund granted automatically by the system"
+      url: "https://www.scribd.com/document/745883713/4-DEC-RGS-SL"
+      strength: "official text (seen in an e-ticket copy)"
+      last_verified: 2026-11-13
+    params: {}
+
+  - id: AUTO-WL-DROPPED
+    name: "Fully waitlisted e-ticket after chart preparation"
+    train_categories: [REGULAR]
+    effective_from: 2015-11-12
+    legal_status: NOTIFIED
+    source:
+      title: "E-ticket rules: fully waitlisted PNRs are dropped and refunded after deducting clerkage"
+      url: "https://es.scribd.com/document/823925526/"
+      strength: "official text (seen in an e-ticket copy)"
+      last_verified: 2026-11-13
+    params: {}
+
+  - id: TDR-MISSED-CONNECTION
+    name: "Connecting train missed because the first train was late (linked PNRs)"
+    train_categories: [REGULAR]
+    effective_from: 2019-04-01
+    legal_status: NOTIFIED
+    needs_verification: true
+    source:
+      title: "IRCTC connecting-journey (linked PNR) facility; Refund Rule 13(3)"
+      url: "https://zeebiz.com/india/news-new-irctc-refund-rule-gives-your-money-back-if-you-missed-your-train-113671"
+      strength: "official announcement (2019); the filing deadline comes only from a partner help page"
+      last_verified: 2026-11-13
+      note: "Deadline of 3 h after actual arrival is from ConfirmTkt's help page. Check IRCTC's TDR rules page."
+    params: {deadline_minutes_after_arrival: 180}

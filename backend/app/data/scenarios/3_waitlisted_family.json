@@ -1,0 +1,13 @@
+{
+  "id": "waitlisted_family",
+  "title": {"en": "High impact: family still waitlisted after the chart", "hi": "बड़ा असर: चार्ट के बाद भी परिवार वेटिंग में"},
+  "pnr": "8100000003",
+  "start_clock": "2026-12-15T13:05:00+05:30",
+  "legs": [
+    {"train_no": "90301", "run_date": "2026-12-15", "from": "NDLS", "to": "PNBE",
+     "class": "SL", "status": "WAITLISTED", "fare_paise": 59500, "passengers": 4}
+  ],
+  "events": [
+    {"train_no": "90301", "type": "CHART_PREPARED", "chart_status": "WAITLISTED", "observed_at": "2026-12-15T13:00:00+05:30"}
+  ]
+}

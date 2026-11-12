@@ -1,0 +1,17 @@
+{
+  "id": "missed_connection",
+  "title": {"en": "Fog delay: connection at Prayagraj at risk", "hi": "कोहरे से देरी: प्रयागराज में कनेक्शन खतरे में"},
+  "pnr": "8100000004",
+  "start_clock": "2026-12-16T02:30:00+05:30",
+  "linked_pnr": true,
+  "min_transfer_minutes": 30,
+  "legs": [
+    {"train_no": "90101", "run_date": "2026-12-15", "from": "NDLS", "to": "PRYJ",
+     "class": "3A", "status": "CONFIRMED", "fare_paise": 104500, "passengers": 1},
+    {"train_no": "90203", "run_date": "2026-12-16", "from": "PRYJ", "to": "DBG",
+     "class": "SL", "status": "CONFIRMED", "fare_paise": 45500, "passengers": 1}
+  ],
+  "events": [
+    {"train_no": "90101", "type": "DELAY", "delay_minutes": 130, "observed_at": "2026-12-16T02:25:00+05:30"}
+  ]
+}

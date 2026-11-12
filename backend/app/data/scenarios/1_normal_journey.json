@@ -1,0 +1,11 @@
+{
+  "id": "normal_journey",
+  "title": {"en": "Normal journey: nothing has gone wrong", "hi": "सामान्य यात्रा: सब ठीक है"},
+  "pnr": "8100000001",
+  "start_clock": "2026-12-12T21:00:00+05:30",
+  "legs": [
+    {"train_no": "90301", "run_date": "2026-12-15", "from": "NDLS", "to": "DBG",
+     "class": "3A", "status": "CONFIRMED", "fare_paise": 214000, "passengers": 1}
+  ],
+  "events": []
+}

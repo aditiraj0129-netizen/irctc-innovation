@@ -1,0 +1,13 @@
+{
+  "id": "edge_three_hours",
+  "title": {"en": "Edge case: delay hovering around 3 hours", "hi": "मुश्किल स्थिति: देरी 3 घंटे के आसपास"},
+  "pnr": "8100000002",
+  "start_clock": "2026-12-15T12:30:00+05:30",
+  "legs": [
+    {"train_no": "90501", "run_date": "2026-12-15", "from": "LKO", "to": "NDLS",
+     "class": "3A", "status": "CONFIRMED", "fare_paise": 118000, "passengers": 1}
+  ],
+  "events": [
+    {"train_no": "90501", "type": "DELAY", "delay_minutes": 190, "observed_at": "2026-12-15T12:25:00+05:30"}
+  ]
+}
