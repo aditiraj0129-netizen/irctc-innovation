@@ -30,6 +30,11 @@ a ticket still waitlisted after the chart, or a cancellation), Agla Kadam:
 > ⚠️ **All railway data is SIMULATED.** Trains numbered 90xxx are invented; station codes are real.
 > This is **not** an official IRCTC or Indian Railways app. A TDR is a request; the Zonal Railway decides the refund.
 
+**Competition submission (SBI Youth Ideathon 2026 · Think Ticketing, Think IRCTC):**
+deck `submission/Agla_Kadam_Innovation_Challenge_Pitch.pptx` · real screenshots `submission/screenshots/` ·
+[video script](docs/FINAL_VIDEO_SCRIPT.md) · [live demo](docs/LIVE_DEMO_SCRIPT.md) ·
+[submission checklist + GitHub steps](docs/FINAL_SUBMISSION_CHECKLIST.md) · [evaluation](docs/FINAL_EVALUATION.md)
+
 ---
 
 ## 1. Run it on macOS

@@ -9,7 +9,7 @@ export function RecommendationBox({ rec, plans, lang }: { rec: Recommendation; p
   return (
     <section className="card rec stack-sm" data-testid="recommendation">
       <h3>{t(lang, "rec_why")}</h3>
-      <ul className="ticks small">{rec.why.map((w) => <li key={w}>{tc(lang, "why_", w)}</li>)}</ul>
+      <ul className="why-list small">{rec.why.map((w) => <li key={w}>{tc(lang, "why_", w)}</li>)}</ul>
       {rec.comparisons.length > 0 && (
         <>
           <p className="label">{t(lang, "rec_vs")}</p>
