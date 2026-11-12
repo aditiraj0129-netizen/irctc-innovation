@@ -6,6 +6,10 @@ export default defineConfig({
   testDir: "./e2e",
   timeout: 30_000,
   retries: 0,
+  // All tests share one demo backend, and tests reset the shared demo journeys.
+  // Running them one at a time stops one test from resetting another test's journey midway.
+  workers: 1,
+  fullyParallel: false,
   use: {
     baseURL: "http://localhost:8000",
     ...devices["Pixel 7"],
