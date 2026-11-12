@@ -17,8 +17,11 @@ export function useAssessment(id: string, lang: Lang, priority: Priority = "time
 
   useEffect(() => {
     load();
-    const h = window.setInterval(load, pollMs);
-    return () => window.clearInterval(h);
+    // Don't keep polling while the tab is hidden (saves battery and server load); refresh on return.
+    const tick = () => { if (!document.hidden) load(); };
+    const h = window.setInterval(tick, pollMs);
+    document.addEventListener("visibilitychange", tick);
+    return () => { window.clearInterval(h); document.removeEventListener("visibilitychange", tick); };
   }, [load, pollMs]);
 
   return { data, error, reload: load };

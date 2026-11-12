@@ -9,5 +9,7 @@ services:
         value: "true"
       - key: LLM_ENABLED
         value: "false"
-      - key: CORS_ORIGINS
-        value: "*"
+      # Frontend and API share one address, so no cross-site (CORS) access is needed.
+      # Set DEMO_TOKEN in the Render dashboard (not here) to protect the presenter controls.
+      - key: DEMO_TOKEN
+        sync: false

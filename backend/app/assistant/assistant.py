@@ -64,7 +64,7 @@ ANSWERS = {
         "ARRIVE": "You would reach at {arrival}.",
         "NO_DEADLINE": "There is no refund deadline right now.",
         "DEADLINE_ITEM": "{kind}: by {deadline}{unverified}.",
-        "REFUND_ITEM": "{kind}: about {amount}{approval} (estimate, stage: {stage}).",
+        "REFUND_ITEM": "{kind}: about {amount}{approval} (estimate; {stage}).",
         "NO_REFUND": "No refund applies right now under the current rule.",
         "STATUS": "Train {train}: {state}, {delay}.",
         "ON_TIME": "no delay reported",
@@ -76,7 +76,9 @@ ANSWERS = {
         "UNKNOWN": "I can answer: what to do now, wait or another train, missed connection, refund amount, deadlines, and train status.",
         "approval": " if approved",
         "unverified": " (deadline not yet officially confirmed)",
-        "rules_note": "Amounts come from rule {rules}. A TDR refund is decided by the Zonal Railway.",
+        "rules_note": "Amounts come from rule {rules}.",
+        "tdr_note": "A TDR refund is decided by the Zonal Railway.",
+        "unconfirmed_note": "Note: this rule is announced but not yet officially confirmed, so treat the amount as uncertain.",
     },
     "hi": {
         "NO_ADVICE": "लाइव डेटा पुराना है, इसलिए मैं सुरक्षित सलाह नहीं दे सकता। RailOne या NTES देखें, या 139 पर कॉल करें।",
@@ -86,7 +88,7 @@ ANSWERS = {
         "ARRIVE": "आप {arrival} तक पहुँचेंगे।",
         "NO_DEADLINE": "अभी कोई रिफंड समय-सीमा नहीं है।",
         "DEADLINE_ITEM": "{kind}: {deadline} तक{unverified}।",
-        "REFUND_ITEM": "{kind}: लगभग {amount}{approval} (अनुमान, स्थिति: {stage})।",
+        "REFUND_ITEM": "{kind}: लगभग {amount}{approval} (अनुमान; {stage})।",
         "NO_REFUND": "मौजूदा नियम के अनुसार अभी कोई रिफंड नहीं।",
         "STATUS": "ट्रेन {train}: {state}, {delay}।",
         "ON_TIME": "कोई देरी नहीं",
@@ -98,7 +100,9 @@ ANSWERS = {
         "UNKNOWN": "मैं बता सकता हूँ: अब क्या करें, रुकें या दूसरी ट्रेन, छूटा कनेक्शन, रिफंड, समय-सीमा और ट्रेन की स्थिति।",
         "approval": " मंज़ूरी मिलने पर",
         "unverified": " (समय-सीमा अभी आधिकारिक रूप से पक्की नहीं)",
-        "rules_note": "राशि नियम {rules} से है। TDR रिफंड का फैसला ज़ोनल रेलवे करता है।",
+        "rules_note": "राशि नियम {rules} से है।",
+        "tdr_note": "TDR रिफंड का फैसला ज़ोनल रेलवे करता है।",
+        "unconfirmed_note": "ध्यान दें: यह नियम घोषित है पर अभी आधिकारिक रूप से पक्का नहीं, इसलिए राशि अनिश्चित मानें।",
     },
 }
 
@@ -127,6 +131,34 @@ CLASS_NAMES = {"en": {"COMFORTABLE": "comfortable", "TIGHT": "tight", "HIGH_RISK
                       "NOT_FEASIBLE": "not possible"},
                "hi": {"COMFORTABLE": "आरामदायक", "TIGHT": "कम समय वाला", "HIGH_RISK": "जोखिम भरा",
                       "NOT_FEASIBLE": "संभव नहीं"}}
+
+
+# Readable names, so answers never show internal codes.
+KIND_NAMES = {
+    "en": {"CANCELLATION": "If you cancel", "TDR_LATE_RUNNING": "TDR (train more than 3 hours late)",
+           "WL_AFTER_CHART": "Waitlisted ticket after the chart", "TRAIN_CANCELLED": "Train cancelled",
+           "TDR_MISSED_CONNECTION": "TDR (missed connection)"},
+    "hi": {"CANCELLATION": "अगर आप रद्द करें", "TDR_LATE_RUNNING": "TDR (ट्रेन 3 घंटे से ज़्यादा लेट)",
+           "WL_AFTER_CHART": "चार्ट के बाद वेटिंग टिकट", "TRAIN_CANCELLED": "ट्रेन रद्द",
+           "TDR_MISSED_CONNECTION": "TDR (कनेक्शन छूटा)"},
+}
+STAGE_NAMES = {
+    "en": {"ESTIMATE": "only if you cancel", "ELIGIBLE_TO_FILE": "you can file now", "AUTOMATIC_DUE": "comes automatically",
+           "NOT_ELIGIBLE": "not eligible now", "NEEDS_VERIFICATION": "needs checking", "FILED": "you filed it",
+           "APPROVED": "approved", "RECEIVED": "received", "REJECTED": "rejected"},
+    "hi": {"ESTIMATE": "सिर्फ़ रद्द करने पर", "ELIGIBLE_TO_FILE": "अभी फाइल कर सकते हैं", "AUTOMATIC_DUE": "अपने आप आएगा",
+           "NOT_ELIGIBLE": "अभी पात्र नहीं", "NEEDS_VERIFICATION": "जाँच ज़रूरी", "FILED": "आपने फाइल किया",
+           "APPROVED": "मंज़ूर", "RECEIVED": "मिल गया", "REJECTED": "अस्वीकार"},
+}
+STATE_NAMES = {
+    "en": {"SCHEDULED": "scheduled", "ON_TIME": "on time", "DELAYED": "delayed", "IN_TRANSIT": "on the move",
+           "ARRIVED": "arrived", "CANCELLED": "cancelled", "WAITLISTED": "still waitlisted", "AT_RISK": "at risk",
+           "LIKELY_MISSED": "likely missed"},
+    "hi": {"SCHEDULED": "तय समय पर", "ON_TIME": "समय पर", "DELAYED": "लेट", "IN_TRANSIT": "चल रही है",
+           "ARRIVED": "पहुँच गई", "CANCELLED": "रद्द", "WAITLISTED": "अभी भी वेटिंग", "AT_RISK": "खतरे में",
+           "LIKELY_MISSED": "छूटने की संभावना"},
+}
+NOT_NOTIFIED = "RULE_NOT_YET_NOTIFIED"
 
 
 class AssistantFact(BaseModel):
@@ -168,6 +200,7 @@ def answer(text: str, lang: str, plans: list[Plan], wallet: Wallet, twin: Journe
         source = "none"
     facts: list[AssistantFact] = []
     rules: list[str] = []
+    unconfirmed = False          # set when an amount we state comes from an announced, not notified, rule
     top = plans[0] if plans else None
 
     def best_text() -> str:
@@ -182,6 +215,9 @@ def answer(text: str, lang: str, plans: list[Plan], wallet: Wallet, twin: Journe
         if top.travels and top.arrival:
             parts.append(A["ARRIVE"].format(arrival=when(top.arrival)))
         rules.extend(r for d in top.decisions for r in d.rule_ids)
+        nonlocal unconfirmed
+        if top.money_back_paise and any(NOT_NOTIFIED in d.unresolved for d in top.decisions):
+            unconfirmed = True
         facts.append(AssistantFact(label="TOP_PLAN", value=top.kind.value,
                                    rule_ids=[r for d in top.decisions for r in d.rule_ids]))
         return " ".join(parts)
@@ -208,7 +244,7 @@ def answer(text: str, lang: str, plans: list[Plan], wallet: Wallet, twin: Journe
         if not items:
             msg = A["NO_DEADLINE"]
         else:
-            msg = " ".join(A["DEADLINE_ITEM"].format(kind=i.kind, deadline=when(i.deadline),
+            msg = " ".join(A["DEADLINE_ITEM"].format(kind=KIND_NAMES[lang].get(i.kind, i.kind), deadline=when(i.deadline),
                                                      unverified=A["unverified"] if i.deadline_unverified else "")
                            for i in items)
             for i in items:
@@ -219,15 +255,18 @@ def answer(text: str, lang: str, plans: list[Plan], wallet: Wallet, twin: Journe
         if not items:
             msg = A["NO_REFUND"]
         else:
-            msg = " ".join(A["REFUND_ITEM"].format(kind=i.kind, amount=rupees(i.estimated_refund_paise),
-                                                   approval=A["approval"] if i.if_approved else "", stage=i.stage.value)
+            msg = " ".join(A["REFUND_ITEM"].format(kind=KIND_NAMES[lang].get(i.kind, i.kind),
+                                                   amount=rupees(i.estimated_refund_paise),
+                                                   approval=A["approval"] if i.if_approved else "",
+                                                   stage=STAGE_NAMES[lang].get(i.stage.value, i.stage.value))
                            for i in items)
+            unconfirmed = any(NOT_NOTIFIED in i.rule.unresolved for i in items)
             for i in items:
                 rules.extend(i.rule.rule_ids)
                 facts.append(AssistantFact(label="REFUND_ESTIMATE", value=str(i.estimated_refund_paise),
                                            rule_ids=i.rule.rule_ids))
     elif intent == Intent.STATUS:
-        msg = " ".join(A["STATUS"].format(train=l.train_no, state=l.state.value,
+        msg = " ".join(A["STATUS"].format(train=l.train_no, state=STATE_NAMES[lang].get(l.state.value, l.state.value),
                                           delay=A["LATE"].format(minutes=l.delay_minutes) if l.delay_minutes
                                           else A["ON_TIME"]) for l in twin.legs)
         facts += [AssistantFact(label="LEG_STATE", value=f"{l.train_no} {l.state.value} {l.delay_minutes}")
@@ -237,5 +276,9 @@ def answer(text: str, lang: str, plans: list[Plan], wallet: Wallet, twin: Journe
     rules = list(dict.fromkeys(rules))
     if rules and msg != A["NO_ADVICE"]:
         msg += " " + A["rules_note"].format(rules=", ".join(rules))
+        if any(r.startswith("TDR") for r in rules):
+            msg += " " + A["tdr_note"]
+        if unconfirmed:
+            msg += " " + A["unconfirmed_note"]
     return AssistantReply(intent=intent, intent_source=source, lang=lang, answer=msg.strip(), facts=facts,
                           rule_ids=rules)

@@ -52,7 +52,10 @@ function PlanCard({ plan, lang, onOpen }: { plan: Plan; lang: Lang; onOpen: () =
     <li className={`card plan ${top ? "plan-top" : ""}`} data-testid={`plan-${plan.kind}`}>
       <div className="row-between">
         <span className="rank">#{plan.rank}</span>
-        <span className={`pill cert-${plan.certainty}`}>{t(lang, "c_" + plan.certainty)}</span>
+        {/* If the money depends on a rule that is only announced, never call it "Automatic" or certain. */}
+        {plan.money_back_paise > 0 && plan.decisions.some((x) => x.legal_status === "ANNOUNCED")
+          ? <span className="pill cert-1" data-testid="cert-unconfirmed">{t(lang, "c_unconfirmed")}</span>
+          : <span className={`pill cert-${plan.certainty}`}>{t(lang, "c_" + plan.certainty)}</span>}
       </div>
       <h3>{plan.explanation.headline}</h3>
 

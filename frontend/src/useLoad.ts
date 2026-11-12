@@ -11,8 +11,10 @@ export function useLoad<T>(fn: () => Promise<T>, deps: unknown[], pollMs = 0) {
   useEffect(() => {
     load();
     if (!pollMs) return;
-    const h = window.setInterval(load, pollMs);
-    return () => window.clearInterval(h);
+    const tick = () => { if (!document.hidden) load(); };   // pause while the tab is hidden
+    const h = window.setInterval(tick, pollMs);
+    document.addEventListener("visibilitychange", tick);
+    return () => { window.clearInterval(h); document.removeEventListener("visibilitychange", tick); };
   }, [load, pollMs]);
   return { data, error, reload: load };
 }

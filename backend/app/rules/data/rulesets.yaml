@@ -38,11 +38,11 @@ rule_sets:
     effective_to: null
     legal_status: ANNOUNCED
     source:
-      title: "Railway Minister's announcement, reported 24-25 Mar 2026"
-      url: "https://www.deccanchronicle.com/nation/current-affairs/train-ticket-cancellation-charges-vaishnaw-announces-new-refund-slabs-1946010"
-      strength: "media report; official notification not found yet"
+      title: "New India Samachar (Govt of India, PIB), 16-30 Apr 2026: windows revised from 48/12/4 h to 72/24/8 h"
+      url: "https://newindiasamachar.pib.gov.in/WriteReadData/flipbook/2026/Apr/2nd/English/files/basic-html/page7.html"
+      strength: "official government publication; the Gazette notification text itself was not found, so still marked ANNOUNCED"
       last_verified: 2026-11-13
-      note: "Rolled out in phases 1-15 Apr 2026. Replace the source with the Gazette/circular once found."
+      note: "Minister's announcement reported 24-25 Mar 2026 (e.g. Deccan Chronicle); rolled out in phases 1-15 Apr 2026. The publication does not give an effective date or notification number. Replace with the Gazette text once found."
     flat_charge_paise: {"1A": 24000, "EC": 24000, "2A": 20000, "FC": 20000, "3A": 18000, "CC": 18000, "3E": 18000, "SL": 12000, "2S": 6000}
     confirmed_slabs:
       - {min_hours: 72, min_inclusive: false, type: FLAT}
@@ -81,9 +81,9 @@ special_rules:
     effective_from: 2015-11-12
     legal_status: NOTIFIED
     source:
-      title: "Refund Rules 2015, rule on late running; repeated on every IRCTC e-ticket"
-      url: "https://www.scribd.com/document/745883713/4-DEC-RGS-SL"
-      strength: "official text (seen in an e-ticket copy)"
+      title: "Railway Passengers (Cancellation of Ticket and Refund of Fare) Rules, 2015, Rule 13(1)"
+      url: "https://future.indiankanoon.org/doc/178452969/"
+      strength: "statutory rule text (via Indian Kanoon); also printed on IRCTC e-tickets"
       last_verified: 2026-11-13
       note: "Full fare, no clerkage, if the TDR is filed online before the train ACTUALLY departs."
     params: {delay_threshold_minutes: 180}

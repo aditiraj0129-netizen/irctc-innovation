@@ -127,7 +127,12 @@ export interface GroupView {
 
 async function req<T>(path: string, init?: RequestInit): Promise<T> {
   const base = (import.meta as any).env?.VITE_API_URL ?? "";
-  const r = await fetch(base + path, { headers: { "Content-Type": "application/json" }, ...init });
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  // Presenter token (only if the deployment sets DEMO_TOKEN). Kept for this browser tab only.
+  if (path.startsWith("/api/demo/")) {
+    try { const tk = window.sessionStorage.getItem("demoToken"); if (tk) headers["X-Demo-Token"] = tk; } catch { /* ignore */ }
+  }
+  const r = await fetch(base + path, { headers, ...init });
   if (!r.ok) {
     let detail = r.statusText;
     try { detail = (await r.json()).detail ?? detail; } catch { /* ignore */ }

@@ -5,6 +5,7 @@ Docs: http://localhost:8000/docs
 """
 from __future__ import annotations
 
+import hmac
 import logging
 import os
 import time
@@ -45,6 +46,15 @@ log = logging.getLogger("agla")
 
 DEMO_MODE = os.getenv("DEMO_MODE", "true").lower() == "true"
 RATE_LIMIT_PER_MIN = int(os.getenv("RATE_LIMIT_PER_MIN", "240"))
+# Optional: when set, presenter/demo endpoints need the header X-Demo-Token with this value,
+# so nobody else can change the demo on a public link. Never put the value in source code.
+DEMO_TOKEN = os.getenv("DEMO_TOKEN", "")
+SECURITY_HEADERS = {
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "no-referrer",
+    "X-Frame-Options": "DENY",
+    "Permissions-Policy": "microphone=(self), camera=(), geolocation=()",
+}
 
 app = FastAPI(title="Agla Kadam API", version="1.0.0",
               description="Disruption helper for booked train journeys. ALL railway data here is SIMULATED.")
@@ -71,17 +81,29 @@ S = State()
 _hits: dict[str, deque] = defaultdict(deque)
 
 
+def client_ip(request: Request) -> str:
+    """The caller's address. Behind Render's proxy, uvicorn runs with --proxy-headers
+    (see Dockerfile), so this is the real user's address, not the proxy's."""
+    return request.client.host if request.client else "?"
+
+
 @app.middleware("http")
 async def log_and_limit(request: Request, call_next):
     rid = uuid.uuid4().hex[:8]
-    ip = request.client.host if request.client else "?"
-    q = _hits[ip]
+    ip = client_ip(request)
     now = time.monotonic()
+    if len(_hits) > 5000:                      # forget addresses that have been quiet for a minute
+        for k in [k for k, v in _hits.items() if not v or now - v[-1] > 60]:
+            del _hits[k]
+    q = _hits[ip]
     while q and now - q[0] > 60:
         q.popleft()
     if request.url.path.startswith("/api/") and len(q) >= RATE_LIMIT_PER_MIN:
-        return JSONResponse({"detail": "Too many requests"}, status_code=429)
+        return JSONResponse({"detail": "Too many requests"}, status_code=429, headers=SECURITY_HEADERS)
     q.append(now)
+    if request.url.path.startswith("/api/demo/") and DEMO_TOKEN and not hmac.compare_digest(
+            request.headers.get("X-Demo-Token", ""), DEMO_TOKEN):
+        return JSONResponse({"detail": "Presenter token required"}, status_code=403, headers=SECURITY_HEADERS)
     start = time.perf_counter()
     try:
         response = await call_next(request)
@@ -92,6 +114,8 @@ async def log_and_limit(request: Request, call_next):
     log.info('"%s %s %s %.0fms rid=%s"', request.method, request.url.path, response.status_code,
              (time.perf_counter() - start) * 1000, rid)
     response.headers["X-Request-ID"] = rid
+    for k, v in SECURITY_HEADERS.items():
+        response.headers.setdefault(k, v)
     return response
 
 
@@ -311,7 +335,9 @@ def list_reports(jid: str):
 @app.post("/api/journeys/{jid}/community/reports")
 def add_report(jid: str, body: ReportIn, request: Request):
     _scenario(jid)
-    who = request.headers.get("X-Reporter") or (request.client.host if request.client else "anon")
+    # One caller (network address) = one reporter. We don't trust any client-chosen header for this,
+    # because it could be changed on every request to fake "many reporters".
+    who = client_ip(request)
     return S.community.submit(jid, body, who, S.clocks[jid].now()).model_dump(mode="json")
 
 
@@ -402,7 +428,12 @@ DIST = Path(os.getenv("FRONTEND_DIST", Path(__file__).resolve().parents[2] / "fr
 if DIST.exists():
     app.mount("/assets", StaticFiles(directory=DIST / "assets"), name="assets")
 
+    DIST_ROOT = DIST.resolve()
+
     @app.get("/{path:path}", include_in_schema=False)
     def spa(path: str):
-        f = DIST / path
-        return FileResponse(f if path and f.is_file() else DIST / "index.html")
+        # Only serve files that really live inside the built frontend folder.
+        # Anything else (including "../" tricks) gets the app's index page, never another file.
+        f = (DIST_ROOT / path).resolve()
+        inside = f == DIST_ROOT or DIST_ROOT in f.parents
+        return FileResponse(f if path and inside and f.is_file() else DIST_ROOT / "index.html")

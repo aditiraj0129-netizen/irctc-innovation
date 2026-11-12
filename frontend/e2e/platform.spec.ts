@@ -116,3 +116,15 @@ test("14. Hindi works on the new screens", async ({ page }) => {
   await page.getByTestId("nav-wallet").click();
   await expect(page.getByTestId("wallet-disclaimer")).toContainText("पक्के नहीं");
 });
+
+test("15. a refund from an announced (not notified) rule is never shown as certain", async ({ page }) => {
+  await page.goto("/#/options/normal_journey");
+  const cancel = page.getByTestId("plan-CANCEL_NOW");
+  await expect(cancel.getByTestId("amount")).toHaveText("₹1,960");
+  await expect(cancel.getByTestId("cert-unconfirmed")).toHaveText("Estimate: rule not yet confirmed");
+  await expect(cancel).not.toContainText("Automatic");
+  await page.goto("/#/assistant/normal_journey");
+  await page.getByTestId("ask-input").fill("how much refund if I cancel");
+  await page.getByTestId("ask-submit").click();
+  await expect(page.getByTestId("ask-reply")).toContainText("not yet officially confirmed");
+});

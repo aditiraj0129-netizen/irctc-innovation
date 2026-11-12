@@ -118,7 +118,7 @@ export const en2: Dict = {
   pf_speed: "Walking speed", pf_normal: "Normal", pf_slow: "Slow", pf_step_free: "I need a step-free route (lifts / ramps)",
   pf_senior: "Senior citizen", pf_save: "Save", pf_saved: "Saved",
   // misc
-  experimental: "Experimental", simulated_label: "Simulated", booked_tickets: "Booked tickets",
+  experimental: "Experimental", simulated_label: "Simulated", booked_tickets: "Booked tickets", c_unconfirmed: "Estimate: rule not yet confirmed",
 };
 
 export const hi2: Dict = {
@@ -214,5 +214,5 @@ export const hi2: Dict = {
   pf_title: "मेरी यात्रा ज़रूरतें", pf_help: "ट्रेन बदलने में लगने वाला समय निकालने के लिए। सिर्फ़ इस डेमो यात्रा के लिए सेव।",
   pf_speed: "चलने की गति", pf_normal: "सामान्य", pf_slow: "धीमी", pf_step_free: "मुझे सीढ़ी-रहित रास्ता चाहिए (लिफ़्ट / रैंप)",
   pf_senior: "वरिष्ठ नागरिक", pf_save: "सेव करें", pf_saved: "सेव हो गया",
-  experimental: "प्रायोगिक", simulated_label: "सिम्युलेटेड", booked_tickets: "बुक टिकट",
+  experimental: "प्रायोगिक", simulated_label: "सिम्युलेटेड", booked_tickets: "बुक टिकट", c_unconfirmed: "अनुमान: नियम अभी पक्का नहीं",
 };

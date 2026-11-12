@@ -14,4 +14,5 @@ COPY backend/ ./
 COPY --from=web /web/dist /app/frontend/dist
 ENV FRONTEND_DIST=/app/frontend/dist
 EXPOSE 8000
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+# --proxy-headers: read the real user address from Render's proxy (needed for fair rate limiting).
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --proxy-headers --forwarded-allow-ips='*'"]

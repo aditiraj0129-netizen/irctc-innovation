@@ -17,11 +17,17 @@ export function Presenter({ lang }: { lang: Lang }) {
   const [train, setTrain] = useState<string>("");
   useEffect(() => { if (legs[0]) setTrain(legs[0].train_no); }, [sid, legs.length]);
 
-  async function run(p: Promise<unknown>) { await p; await reload(); }
+  const [err, setErr] = useState("");
+  async function run(p: Promise<unknown>) {
+    try { await p; setErr(""); } catch (e) { setErr((e as Error).message); }
+    await reload();
+  }
 
   return (
     <div className="stack presenter">
       <h1>{t(lang, "presenter")}</h1>
+      <DemoTokenBox />
+      {err && <p className="error" role="alert" data-testid="presenter-error">{err}</p>}
       <label className="label" htmlFor="sc">Scenario</label>
       <select id="sc" value={sid} onChange={(e) => setSid(e.target.value)} data-testid="presenter-scenario">
         {scenarios.map((s) => <option key={s.id} value={s.id}>{s.title.en}</option>)}
@@ -63,5 +69,16 @@ export function Presenter({ lang }: { lang: Lang }) {
         </section>
       )}
     </div>
+  );
+}
+
+// Only needed when the deployment sets DEMO_TOKEN. Stored for this tab only (sessionStorage).
+function DemoTokenBox() {
+  const [v, setV] = useState(() => { try { return window.sessionStorage.getItem("demoToken") ?? ""; } catch { return ""; } });
+  return (
+    <label className="label small">Presenter token (only if the server asks for one)
+      <input type="password" value={v} autoComplete="off" data-testid="demo-token"
+        onChange={(e) => { setV(e.target.value); try { window.sessionStorage.setItem("demoToken", e.target.value); } catch { /* ignore */ } }} />
+    </label>
   );
 }
