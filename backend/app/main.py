@@ -15,7 +15,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -24,9 +24,21 @@ from app.data.source import SimulatedSource, UnknownPNRError, load_scenarios
 from app.data.timetable import STATIONS, TIMETABLE_LABEL
 from app.domain.models import Event, EventSource, EventType
 from app.explain.explainer import explain, llm_from_env
+from app.assistant.assistant import answer as assistant_answer
+from app.community.reports import CommunityService, ReportIn, seed as seed_reports
+from app.detect.detector import SituationType
+from app.family.family import group_view, load_groups
+from app.insights.resilience import score_journey
+from app.offline.card import build_card
+from app.plan.counterfactual import recommend
 from app.plan.ranker import Priority
-from app.plan.service import assess, registry
+from app.plan.service import assess, connections_for, registry
+from app.plan.transfer import PassengerProfile
 from app.rules.models import TicketStatus
+from app.store import Store
+from app.twin.twin import build_twin
+from app.wallet.wallet import build_wallet, export_text, valid_transition
+from app.whatif.simulator import simulate
 
 logging.basicConfig(level=logging.INFO, format='{"t":"%(asctime)s","lvl":"%(levelname)s","msg":%(message)s}')
 log = logging.getLogger("agla")
@@ -47,8 +59,12 @@ class State:
         self.scenarios = load_scenarios()
         self.source = SimulatedSource(self.scenarios)
         self.clocks = {k: FixedClock(s.start_clock) for k, s in self.scenarios.items()}
-        self.actions: dict[str, list[dict]] = defaultdict(list)
+        self.store = Store()
+        self.community = CommunityService(self.store)
+        self.groups = load_groups()
         self.llm = llm_from_env()
+        for k, sc in self.scenarios.items():
+            seed_reports(self.community, k, sc.start_clock)
 
 
 S = State()
@@ -93,7 +109,7 @@ def journey_out(jid: str) -> dict:
     sc = _scenario(jid)
     j = sc.journey
     return {
-        "id": j.id, "pnr_label": j.pnr_label, "title": sc.title, "linked_pnr": j.linked_pnr,
+        "id": j.id, "pnr_label": j.pnr_label, "title": sc.title, "linked_pnr": j.linked_pnr, "group": sc.group,
         "min_transfer_minutes": j.min_transfer_minutes,
         "legs": [{"seq": l.seq, "train_no": l.train_no, "train_name": l.train_name,
                   "from": _stn(l.from_stn), "to": _stn(l.to_stn),
@@ -103,6 +119,22 @@ def journey_out(jid: str) -> dict:
                   "passengers": l.ticket.passengers, "fare_paise": l.ticket.total_fare_paise}
                  for l in j.legs],
     }
+
+
+class Preferences(BaseModel):
+    profile: PassengerProfile = Field(default_factory=PassengerProfile)
+    priority: Priority = Priority.TIME
+
+
+def prefs(jid: str) -> Preferences:
+    d = S.store.get_prefs(jid)
+    return Preferences(**d) if d else Preferences()
+
+
+def ctx(jid: str):
+    """Everything every feature needs for one journey, from ONE place (no duplicated logic)."""
+    sc = _scenario(jid)
+    return sc.journey, S.source.events_for(jid), S.clocks[jid].now(), prefs(jid).profile
 
 
 # ---------- passenger API ----------
@@ -118,7 +150,7 @@ def health():
 
 @app.get("/api/scenarios")
 def scenarios():
-    return [{"id": s.id, "pnr": s.pnr, "title": s.title} for s in S.scenarios.values()]
+    return [{"id": s.id, "pnr": s.pnr, "title": s.title, "group": s.group} for s in S.scenarios.values()]
 
 
 @app.post("/api/journeys")
@@ -137,9 +169,11 @@ def get_journey(jid: str):
 
 @app.get("/api/journeys/{jid}/assessment")
 def get_assessment(jid: str, priority: Priority = Priority.TIME, lang: str = Query("en", pattern="^(en|hi)$")):
-    sc = _scenario(jid)
-    now = S.clocks[jid].now()
-    r = assess(sc.journey, S.source.events_for(jid), now, priority)
+    journey, events, now, profile = ctx(jid)
+    r = assess(journey, events, now, priority, profile)
+    rec = None
+    if r.assessment.primary.type not in (SituationType.STALE_DATA, SituationType.JOURNEY_OVER):
+        rec = recommend(r.plans, priority, simulate(journey, events, now, priority, profile))
     plans = []
     for p in r.plans:
         e = explain(p, lang, S.llm)
@@ -151,7 +185,9 @@ def get_assessment(jid: str, priority: Priority = Priority.TIME, lang: str = Que
         "situations": [s.model_dump(mode="json") for s in r.assessment.situations],
         "live": {k: v.model_dump(mode="json") for k, v in r.assessment.live.items()},
         "plans": plans, "rights_clock": r.rights_clock.model_dump(mode="json"),
-        "actions": S.actions[jid],
+        "recommendation": rec.model_dump(mode="json") if rec else None,
+        "profile": profile.model_dump(),
+        "actions": S.store.actions(jid),
     }
 
 
@@ -163,9 +199,7 @@ class ActionIn(BaseModel):
 @app.post("/api/journeys/{jid}/actions")
 def record_action(jid: str, body: ActionIn):
     _scenario(jid)
-    entry = {"plan_id": body.plan_id, "plan_kind": body.plan_kind, "at": S.clocks[jid].now().isoformat()}
-    S.actions[jid].append(entry)
-    return entry
+    return S.store.add_action(jid, body.plan_id, body.plan_kind, S.clocks[jid].now().isoformat())
 
 
 @app.get("/api/rules")
@@ -177,6 +211,124 @@ def rules():
                           for r in d.rule_sets],
             "special_rules": [r.model_dump(mode="json", include={"id", "name", "legal_status", "source",
                                                                   "needs_verification"}) for r in d.special_rules]}
+
+
+# ---------- upgrade: digital twin, what-if, wallet, resilience, offline, assistant, community ----------
+
+@app.get("/api/journeys/{jid}/twin")
+def get_twin(jid: str):
+    journey, events, now, profile = ctx(jid)
+    return build_twin(journey, events, now, profile).model_dump(mode="json")
+
+
+@app.get("/api/journeys/{jid}/whatif")
+def get_whatif(jid: str, priority: Priority = Priority.TIME, delay_increase: int = Query(60, ge=1, le=600),
+               wait_minutes: int = Query(30, ge=5, le=720)):
+    journey, events, now, profile = ctx(jid)
+    return simulate(journey, events, now, priority, profile, delay_increase, wait_minutes).model_dump(mode="json")
+
+
+def _wallet(jid: str):
+    journey, events, now, profile = ctx(jid)
+    plans = assess(journey, events, now, Priority.TIME, profile).plans
+    return build_wallet(journey, events, now, plans, S.store.claims(jid), S.store.actions(jid))
+
+
+@app.get("/api/journeys/{jid}/wallet")
+def get_wallet(jid: str):
+    return _wallet(jid).model_dump(mode="json")
+
+
+class ClaimIn(BaseModel):
+    item_id: str = Field(min_length=3, max_length=64)
+    status: str = Field(pattern="^(FILED|APPROVED|RECEIVED|REJECTED)$")
+
+
+@app.post("/api/journeys/{jid}/wallet/claims")
+def post_claim(jid: str, body: ClaimIn):
+    w = _wallet(jid)
+    if not valid_transition(w, body.item_id, body.status):
+        raise HTTPException(422, "INVALID_CLAIM_STEP")
+    return S.store.add_claim(jid, body.item_id, body.status, S.clocks[jid].now().isoformat())
+
+
+@app.get("/api/journeys/{jid}/wallet/export", response_class=PlainTextResponse)
+def export_wallet(jid: str):
+    return PlainTextResponse(export_text(_wallet(jid)),
+                             headers={"Content-Disposition": f'attachment; filename="agla-kadam-{jid}-rights.txt"'})
+
+
+@app.get("/api/journeys/{jid}/preferences")
+def get_prefs(jid: str):
+    _scenario(jid)
+    return prefs(jid).model_dump()
+
+
+@app.put("/api/journeys/{jid}/preferences")
+def put_prefs(jid: str, body: Preferences):
+    _scenario(jid)
+    S.store.set_prefs(jid, body.model_dump())
+    return body.model_dump()
+
+
+@app.get("/api/journeys/{jid}/resilience")
+def get_resilience(jid: str):
+    journey, events, now, profile = ctx(jid)
+    twin = build_twin(journey, events, now, profile)
+    return score_journey(journey, twin, connections_for(journey), profile).model_dump(mode="json")
+
+
+@app.get("/api/journeys/{jid}/offline-card")
+def get_offline_card(jid: str):
+    journey, events, now, profile = ctx(jid)
+    plans = assess(journey, events, now, Priority.TIME, profile).plans
+    twin = build_twin(journey, events, now, profile)
+    wallet = build_wallet(journey, events, now, plans, S.store.claims(jid), S.store.actions(jid))
+    return build_card(journey, twin, plans, wallet).model_dump(mode="json")
+
+
+class AskIn(BaseModel):
+    text: str = Field(min_length=1, max_length=300)
+    lang: str = Field("en", pattern="^(en|hi)$")
+
+
+@app.post("/api/journeys/{jid}/assistant")
+def ask(jid: str, body: AskIn):
+    journey, events, now, profile = ctx(jid)
+    r = assess(journey, events, now, Priority.TIME, profile)
+    wallet = build_wallet(journey, events, now, r.plans, S.store.claims(jid), S.store.actions(jid))
+    twin = build_twin(journey, events, now, profile)
+    stale = r.assessment.primary.type == SituationType.STALE_DATA
+    return assistant_answer(body.text, body.lang, r.plans, wallet, twin, stale, S.llm).model_dump(mode="json")
+
+
+@app.get("/api/journeys/{jid}/community/reports")
+def list_reports(jid: str):
+    _scenario(jid)
+    return [r.model_dump(mode="json") for r in S.community.active(jid, S.clocks[jid].now())]
+
+
+@app.post("/api/journeys/{jid}/community/reports")
+def add_report(jid: str, body: ReportIn, request: Request):
+    _scenario(jid)
+    who = request.headers.get("X-Reporter") or (request.client.host if request.client else "anon")
+    return S.community.submit(jid, body, who, S.clocks[jid].now()).model_dump(mode="json")
+
+
+@app.get("/api/groups")
+def list_groups():
+    return [{"id": g.id, "name": g.name, "members": len(g.members)} for g in S.groups.values()]
+
+
+@app.get("/api/groups/{gid}")
+def get_group(gid: str, priority: Priority = Priority.FAMILY):
+    if gid not in S.groups:
+        raise HTTPException(404, "Group not found")
+    g = S.groups[gid]
+    jids = list(dict.fromkeys(m.journey for m in g.members))
+    now = S.clocks[jids[0]].now()
+    return group_view(g, {j: S.scenarios[j].journey for j in jids}, {j: S.source.events_for(j) for j in jids},
+                      now, priority).model_dump(mode="json")
 
 
 # ---------- presenter (demo only) ----------
@@ -204,8 +356,19 @@ def demo_reset(jid: str):
     sc = _scenario(jid)
     S.source.reset(jid)
     S.clocks[jid].set(sc.start_clock)
-    S.actions[jid].clear()
+    S.store.clear_journey(jid)
+    seed_reports(S.community, jid, sc.start_clock)
     return {"ok": True, "now": S.clocks[jid].now()}
+
+
+@app.post("/api/demo/groups/{gid}/reset")
+def demo_group_reset(gid: str):
+    _demo_only()
+    if gid not in S.groups:
+        raise HTTPException(404, "Group not found")
+    for j in dict.fromkeys(m.journey for m in S.groups[gid].members):
+        demo_reset(j)
+    return {"ok": True}
 
 
 @app.post("/api/demo/{jid}/clock")

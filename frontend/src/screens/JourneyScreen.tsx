@@ -3,12 +3,17 @@ import { go } from "../router";
 import { dayTime, duration, minutesBetween } from "../format";
 import { t } from "../i18n";
 import { useAssessment } from "../useAssessment";
+import { api } from "../api";
+import { useLoad } from "../useLoad";
+import { SectionNav } from "../components/SectionNav";
+import { TwinPanel } from "../components/TwinPanel";
 
 const CALM = new Set(["ALL_CLEAR", "NOT_WATCHING_YET", "JOURNEY_OVER"]);
 
 // Screens 2 + 3: the journey timeline, and the "something changed" alert when a rule threshold is crossed.
 export function JourneyScreen({ id, lang }: { id: string; lang: Lang }) {
   const { data, error } = useAssessment(id, lang);
+  const twin = useLoad(() => api.twin(id), [id], 3000);
   if (error && !data) return <p className="error" role="alert">{t(lang, "err_network")}</p>;
   if (!data) return <p className="muted">…</p>;
   const j = data.journey;
@@ -22,6 +27,7 @@ export function JourneyScreen({ id, lang }: { id: string; lang: Lang }) {
         <h1>{t(lang, "my_journey")}</h1>
         <span className="mono small muted">{j.pnr_label}</span>
       </div>
+      <SectionNav id={id} lang={lang} active="journey" />
 
       {!calm && (
         <section className={`alert ${sit.type === "STALE_DATA" ? "alert-grey" : "alert-amber"}`} role="alert" data-testid="situation-alert">
@@ -39,6 +45,9 @@ export function JourneyScreen({ id, lang }: { id: string; lang: Lang }) {
         </section>
       )}
 
+      {twin.data && <TwinPanel twin={twin.data} lang={lang} />}
+
+      <h2 className="small-h">{t(lang, "booked_tickets")}</h2>
       <ol className="timeline">
         {j.legs.map((leg, i) => {
           const live = data.live[leg.train_no];

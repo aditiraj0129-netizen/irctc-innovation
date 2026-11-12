@@ -5,6 +5,9 @@ import { RightsClock } from "../components/RightsClock";
 import { dayTime, duration, rupees, time } from "../format";
 import { t } from "../i18n";
 import { useAssessment } from "../useAssessment";
+import { SectionNav } from "../components/SectionNav";
+import { RecommendationBox } from "../components/RecommendationBox";
+import { tc } from "../i18n";
 
 // Screen 4: ranked plans + the Rights Clock. Every amount here comes from the rules engine.
 export function OptionsScreen({ id, lang }: { id: string; lang: Lang }) {
@@ -17,13 +20,14 @@ export function OptionsScreen({ id, lang }: { id: string; lang: Lang }) {
     <div className="stack">
       <button className="link" onClick={() => go(`journey/${id}`)}>← {t(lang, "back")}</button>
       <h1>{t(lang, "your_options")}</h1>
+      <SectionNav id={id} lang={lang} active="options" />
       <p className="muted small">{t(lang, "s_" + data.situation.type, {
         station: data.journey.legs.find((l) => l.to.code === data.situation.detail?.station)?.to[lang] ?? data.situation.detail?.station ?? "",
       })}</p>
 
       <fieldset className="segmented" aria-label={t(lang, "priority")}>
         <legend className="small muted">{t(lang, "priority")}</legend>
-        {(["time", "money", "risk"] as Priority[]).map((p) => (
+        {(["time", "money", "risk", "transfers"] as Priority[]).map((p) => (
           <button key={p} aria-pressed={priority === p} data-testid={`priority-${p}`} onClick={() => setPriority(p)}>
             {t(lang, "p_" + p)}
           </button>
@@ -31,6 +35,8 @@ export function OptionsScreen({ id, lang }: { id: string; lang: Lang }) {
       </fieldset>
 
       <RightsClock clock={data.rights_clock} lang={lang} />
+
+      {data.recommendation && <RecommendationBox rec={data.recommendation} plans={data.plans} lang={lang} />}
 
       <ol className="plans" data-testid="plans">
         {data.plans.map((p) => <PlanCard key={p.id} plan={p} lang={lang} onOpen={() => go(`howto/${id}/${p.id}`)} />)}
@@ -77,6 +83,14 @@ function PlanCard({ plan, lang, onOpen }: { plan: Plan; lang: Lang; onOpen: () =
         <ul className="rides small">
           {plan.rides.map((r) => <li key={r.train_no + r.dep}>{r.train_no} {r.train_name}: {r.from_stn} {time(r.dep)} → {r.to_stn} {dayTime(r.arr)}</li>)}
         </ul>
+      )}
+
+      {plan.transfers && plan.transfers.length > 0 && (
+        <p className="small row-gap" data-testid="transfer-badges">
+          {plan.transfers.map((x) => (
+            <span key={x.station + x.arrive} className={`badge xb-${x.cls}`}>{tc(lang, "x_", x.cls)} · {x.station} · {duration(x.margin_minutes, lang)}</span>
+          ))}
+        </p>
       )}
 
       {top && plan.reasons.length > 0 && (

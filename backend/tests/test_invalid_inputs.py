@@ -66,3 +66,27 @@ def test_fixed_clock():
     assert c.now() == datetime(2026, 12, 10, 10, 30, tzinfo=IST)
     with pytest.raises(NaiveDatetimeError):
         c.set(datetime(2026, 12, 10, 9, 0))
+
+
+# ---------- Every rules answer exposes its metadata (upgrade requirement) ----------
+
+def test_decision_exposes_rule_metadata(make_ticket, registry):
+    d = cancellation_refund(make_ticket(), DEP - timedelta(hours=30), registry)
+    assert d.rule_set_id == "RS-REG-2026-APR"
+    assert d.rule_version == "2026-04-announced.1"
+    assert d.effective_from == date(2026, 4, 1)
+    assert [c.value for c in d.applies_to_categories] == ["REGULAR"]
+    assert d.unresolved == ["RULE_NOT_YET_NOTIFIED"] and d.verification_pending
+
+
+def test_unverified_source_is_flagged(make_ticket, registry):
+    feb = datetime(2026, 2, 20, 22, 0, tzinfo=IST)
+    d = cancellation_refund(make_ticket(scheduled_departure=feb), feb - timedelta(hours=30), registry)
+    assert "SOURCE_NOT_YET_CHECKED" in d.unresolved
+
+
+def test_notified_and_checked_rule_has_nothing_unresolved(make_ticket, registry):
+    from app.rules.models import TrainCategory
+    d = cancellation_refund(make_ticket(train_category=TrainCategory.VANDE_BHARAT_SLEEPER),
+                            DEP - timedelta(hours=30), registry)
+    assert d.unresolved == [] and not d.verification_pending

@@ -1,0 +1,14 @@
+[
+  {
+    "id": "demo_family",
+    "name": {"en": "Family group (simulated)", "hi": "परिवार समूह (सिम्युलेटेड)"},
+    "note": "Simulated profiles. Labels only, no names or personal details are stored.",
+    "members": [
+      {"id": "m1", "label": {"en": "Adult 1", "hi": "वयस्क 1"}, "journey": "family_confirmed", "profile": {}},
+      {"id": "m2", "label": {"en": "Senior (needs step-free)", "hi": "वरिष्ठ (सीढ़ी-रहित रास्ता)"}, "journey": "family_confirmed",
+       "profile": {"senior": true, "step_free": true}},
+      {"id": "m3", "label": {"en": "Adult 2", "hi": "वयस्क 2"}, "journey": "family_waitlisted", "profile": {}},
+      {"id": "m4", "label": {"en": "Child", "hi": "बच्चा"}, "journey": "family_waitlisted", "profile": {}}
+    ]
+  }
+]

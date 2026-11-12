@@ -5,6 +5,7 @@ from enum import Enum
 
 from pydantic import BaseModel, Field
 
+from app.plan.transfer import RISK_ORDER, TransferCheck, TransferClass
 from app.rules.models import Decision
 
 
@@ -57,3 +58,11 @@ class Plan(BaseModel):
     warnings: list[str] = Field(default_factory=list)
     reasons: list[dict] = Field(default_factory=list)   # filled by the ranker
     rank: int | None = None
+    transfers: list[TransferCheck] = Field(default_factory=list)   # change-of-train checks
+    worst_transfer: TransferClass | None = None
+    changes: int = 0
+    decision_leg: int = 1              # which leg of the journey the decisions are about
+
+    @property
+    def transfer_risk(self) -> int:
+        return RISK_ORDER[self.worst_transfer] if self.worst_transfer else 0

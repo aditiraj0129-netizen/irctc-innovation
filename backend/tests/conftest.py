@@ -33,3 +33,11 @@ def make_ticket():
         data.update(overrides)
         return Ticket(**data)
     return _make
+
+
+@pytest.fixture(autouse=True)
+def _fresh_rate_limit_window():
+    """Every test starts with an empty rate-limit window (the limiter itself stays on)."""
+    from app import main
+    main._hits.clear()
+    yield

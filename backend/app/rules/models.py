@@ -99,6 +99,7 @@ class Slab(BaseModel):
 
 class RuleSet(BaseModel):
     id: str
+    version: str = "1"
     name: str
     train_categories: list[TrainCategory]
     effective_from: date
@@ -127,6 +128,7 @@ class RuleSet(BaseModel):
 class SpecialRule(BaseModel):
     """TDR and automatic-refund rules."""
     id: str
+    version: str = "1"
     name: str
     train_categories: list[TrainCategory]
     effective_from: date
@@ -181,6 +183,10 @@ class Decision(BaseModel):
     deadline_moves_with_live_status: bool = False
     rule_ids: list[str] = Field(default_factory=list)
     rule_set_id: str | None = None
+    rule_version: str | None = None
+    rule_name: str | None = None
+    applies_to_categories: list[TrainCategory] = Field(default_factory=list)
+    effective_from: date | None = None
     legal_status: LegalStatus | None = None
     source_title: str | None = None
     source_url: str | None = None
@@ -188,3 +194,8 @@ class Decision(BaseModel):
     approval_note: str | None = None
     warnings: list[str] = Field(default_factory=list)
     reason_key: str                       # a stable code the UI turns into Hindi/English text
+    unresolved: list[str] = Field(default_factory=list)   # conditions that are NOT yet verified
+
+    @property
+    def verification_pending(self) -> bool:
+        return bool(self.unresolved)

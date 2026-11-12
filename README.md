@@ -12,6 +12,21 @@ a ticket still waitlisted after the chart, or a cancellation), Agla Kadam:
 5. explains the top plan in **Hindi or English** (an optional LLM, checked by a validator, with a template fallback),
 6. gives the **official steps**. It never files, cancels or logs in for you.
 
+**Upgrade: Railway Journey Protection Platform.** The same engine now also powers, as one product:
+
+| Feature | Where in the app | What it does |
+| --- | --- | --- |
+| Journey Digital Twin | Overview | Every leg, every change of train, how fresh each fact is, what is affected, expected final arrival |
+| Station Transfer Intelligence | Overview, Options | Classifies each change of train as Comfortable / Tight / High risk / Not possible, using simulated station estimates and your walking speed / step-free needs; impossible changes are never offered |
+| What-If Simulator | What-If | 7 scenarios (act now, wait, delay grows, cancel, other train, missed connection, one-change route), each calculated by the rules engine, with confidence and assumptions |
+| Counterfactual reasoning | Options | Why the top option is first, how it compares, and what changes if you wait or the delay grows (only from calculated scenarios) |
+| Passenger Rights Wallet | Wallet | Estimate vs eligible vs filed vs approved vs received, kept apart; rule version, effective date, source, unresolved conditions; claim tracking; text export |
+| Family Journey Guardian | More → Family group | One view for a group on two PNRs; together vs split options, clearly labelled; labels only, no names |
+| Offline Journey Guardian | More → Offline card | Masked snapshot saved on the phone (IndexedDB), service worker for the app shell, "not live" + time made, emergency numbers |
+| Multilingual assistant | More → Ask | Text or voice (browser speech API) in English, Hindi or Hinglish; answers built only from backend facts; read-aloud |
+| Resilience score | More → Resilience | Experimental, transparent weighted score with every factor shown |
+| Community reports | More → Station reports | Unverified, expiring, de-duplicated passenger reports; personal data rejected; never change options or refunds |
+
 > ⚠️ **All railway data is SIMULATED.** Trains numbered 90xxx are invented; station codes are real.
 > This is **not** an official IRCTC or Indian Railways app. A TDR is a request; the Zonal Railway decides the refund.
 
@@ -27,7 +42,7 @@ cd agla-kadam/backend
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-pytest                                  # expect: 119 passed
+pytest                                  # expect: 181 passed
 uvicorn app.main:app --reload           # API on http://localhost:8000  (docs: /docs)
 ```
 
@@ -48,8 +63,10 @@ FastAPI serves the built app at http://localhost:8000.
 
 | Suite | Command | What it covers |
 | --- | --- | --- |
-| Backend (119 tests) | `cd backend && pytest` | Refund slabs and exact boundary times, rule versions by date and train category, the TDR 3-hour boundary, invalid inputs, the disruption detector, route search vs Connection Scan, ranking, the Rights Clock, LLM failures (timeout, bad JSON, invented numbers, promise wording), the API, and the 4 demo scenarios |
-| End-to-end (6 tests) | `cd frontend && npm run build && npx playwright install chromium && npm run test:e2e` | Full passenger journeys on a phone-sized screen, Hindi toggle, invalid PNRs, stale data |
+| Backend (181 tests: the original 119 + 62 new) | `cd backend && pytest` | Refund slabs and exact boundary times, rule versions by date and train category, the TDR 3-hour boundary, invalid inputs, the disruption detector, route search vs Connection Scan, ranking, the Rights Clock, LLM failures (timeout, bad JSON, invented numbers, promise wording), the API, the demo scenarios; plus the twin, transfer classes, what-if, counterfactuals, resilience, wallet stages and claims, family groups, offline card, assistant intents (EN/HI/Hinglish, stale data, LLM failure), community reports (duplicates, expiry, conflicts, personal data, no effect on recommendations) and every new endpoint |
+| End-to-end (14 tests: the original 6 + 8 new) | `cd frontend && npm run build && npx playwright install chromium && npm run test:e2e` | Full passenger journeys on a phone-sized screen, Hindi toggle, invalid PNRs, stale data; plus twin → options → what-if, wallet claim + export, family group, offline card with the network switched off, Hinglish assistant question, community reports, accessibility needs, Hindi on the new screens |
+
+Full results: [docs/TEST_REPORT.md](docs/TEST_REPORT.md). API: [docs/API.md](docs/API.md). Architecture: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Demo, pitch and comparison: [docs/DEMO_AND_PITCH.md](docs/DEMO_AND_PITCH.md).
 
 If Playwright's browser download is blocked, point it at Chrome:
 `CHROME_PATH="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" npm run test:e2e`
@@ -66,6 +83,8 @@ Press **Reset scenario** before each run.
 | 3 | `8100000003` | **High impact**: family of 4, SL, waitlisted after the chart at 13:00 | "Do nothing: refund comes automatically": **₹2,140** (4 × ₹595 − 4 × ₹60 clerkage). Top plan (Reach soonest): 90305 at 17:00, arriving 06:30, marked **Seats not checked**. Decide by **16:30** |
 | 4 | `8100000004` | **Missed connection in fog**: NDLS→PRYJ (late 2h10m) then PRYJ→DBG, linked PNRs | Connection at Prayagraj at risk (margin −85 min). Top plan: 90205 + 90601, arriving 20:30, plus a TDR for the missed train, **₹455 if approved**, with its deadline marked *not yet officially confirmed*. Decide by **09:15** |
 
+| 5 | `8100000005` + `8100000006` | **Family group** on two PNRs (2 confirmed, 2 waitlisted after chart), NDLS→PNBE 3A ₹1,650 each | Open More → Family group. "Members have different ticket status". With "Keep family together": everyone switches to 90305, **₹4,830 back**, ₹1,770 lost, 4 new tickets; split options labelled **Splits the group** with ₹3,180 back |
+
 Extra edge cases to show from the presenter: **+1 h** with no new update → "Live data is out of date, so we won't advise".
 **Cancel train** → automatic full refund plus alternatives.
 
@@ -80,9 +99,24 @@ backend/app
   detect/detector.py     connection buffer, >3h late, waitlisted after chart, cancelled, stale data
   plan/                  csa.py (route search), builder.py, ranker.py, rights_clock.py, service.py
   explain/               Hindi/English templates, LLM client, validator
+  twin/twin.py           Journey Digital Twin
+  plan/transfer.py       Station Transfer Intelligence (data/station_transfer.yaml, simulated)
+  plan/counterfactual.py why first, comparisons, counterfactuals
+  whatif/simulator.py    What-If scenarios (hypothetical events, never stored)
+  wallet/wallet.py       Passenger Rights Wallet stages + export
+  family/family.py       Family Journey Guardian (data/groups.json, labels only)
+  offline/card.py        masked offline snapshot
+  assistant/assistant.py intent detection (keywords; optional LLM picks an intent only)
+  insights/resilience.py experimental resilience score
+  community/reports.py   unverified, expiring passenger reports
+  store.py               SQLite: actions, claims, preferences, reports
   main.py                FastAPI: passenger API + presenter endpoints + serves the built frontend
 frontend/src
-  screens/               Add journey → My journey → Your options (+ Rights Clock) → How to do it → Summary; Presenter
+  screens/               Add journey → My journey (twin) → Your options (+ Rights Clock) → How to do it → Summary; Presenter;
+                         What-If, Wallet, More, Resilience, Family, Offline card, Assistant, Community, Preferences
+  components/            RightsClock, SectionNav, TwinPanel, RecommendationBox
+  offlineStore.ts        IndexedDB for the saved offline card
+public/sw.js             service worker (app shell only, never /api)
   components/RightsClock.tsx
   i18n.ts                all Hindi/English text and the official steps
 e2e/                     Playwright tests
@@ -102,7 +136,9 @@ The minimum transfer time (30 min) is our assumption, not an official figure.
 ## 5. Environment variables
 
 See `.env.example`. Key ones: `DEMO_MODE` (presenter endpoints on/off), `LLM_ENABLED`, `LLM_PROVIDER`
-(`anthropic` or `openai`-compatible), `LLM_MODEL`, `LLM_API_KEY`, `LLM_TIMEOUT_SECONDS`, `CORS_ORIGINS`.
+(`anthropic` or `openai`-compatible), `LLM_MODEL`, `LLM_API_KEY`, `LLM_TIMEOUT_SECONDS`, `CORS_ORIGINS`, `RATE_LIMIT_PER_MIN`,
+`STORE_PATH` (SQLite file for claims, preferences and reports; default `:memory:`, so a restart clears them).
+Never put API keys in source code; set them in `backend/.env` (git-ignored) or the hosting dashboard.
 
 ## 6. Deploy (free tier)
 
@@ -123,8 +159,9 @@ Local Docker test: `docker build -t agla-kadam . && docker run -p 8000:8000 agla
 
 ## 8. Demo checklist
 
-- [ ] `pytest` green · `npm run test:e2e` green
+- [ ] `pytest` green (181) · `npm run test:e2e` green (14)
 - [ ] Deployed app opened on the phone over mobile data
 - [ ] One run-through with `LLM_ENABLED=false`
 - [ ] Presenter panel reset between scenarios
-- [ ] A backup screen recording of all 4 scenarios
+- [ ] A backup screen recording of all 5 scenarios
+- [ ] Offline card saved on the demo phone before going on stage

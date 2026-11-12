@@ -73,6 +73,11 @@ def detect(journey: Journey, events: list[Event], now: datetime, assume_fresh: b
         return Assessment(now=now, situations=[Situation(type=SituationType.JOURNEY_OVER)], live=live)
 
     watching = now >= first.scheduled_departure - timedelta(hours=WATCH_FROM_HOURS)
+    # A cancellation is reported as soon as it is known, even before the watch window opens.
+    early_cancel = [Situation(type=SituationType.TRAIN_CANCELLED, leg_seq=l.seq, train_no=l.train_no)
+                    for l in journey.legs if live[l.train_no].cancelled]
+    if not watching and early_cancel:
+        return Assessment(now=now, situations=early_cancel, live=live)
     if not watching:
         return Assessment(now=now, situations=[Situation(type=SituationType.NOT_WATCHING_YET)], live=live)
 

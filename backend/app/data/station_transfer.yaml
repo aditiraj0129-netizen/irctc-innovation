@@ -1,0 +1,20 @@
+# SIMULATED station transfer estimates. NOT official data.
+# We do not have real platform numbers or walking distances. These values are
+# placeholders to show how transfer feasibility works; replace them with
+# measured or official data before any real use.
+label: "Simulated transfer estimates (not official)"
+default: {complexity: MEDIUM, walk_minutes: 20}
+stations:
+  NDLS: {complexity: HIGH, walk_minutes: 25}
+  CNB:  {complexity: MEDIUM, walk_minutes: 18}
+  LKO:  {complexity: MEDIUM, walk_minutes: 18}
+  PRYJ: {complexity: MEDIUM, walk_minutes: 20}
+  DDU:  {complexity: MEDIUM, walk_minutes: 20}
+  PNBE: {complexity: MEDIUM, walk_minutes: 20}
+  DBG:  {complexity: LOW, walk_minutes: 10}
+profile_factors:
+  walking_speed: {normal: 1.0, slow: 1.5}
+  step_free_extra_minutes: {LOW: 0, MEDIUM: 10, HIGH: 15}
+classes:            # margin = gap - required time
+  high_risk_below: 10
+  tight_below: 25

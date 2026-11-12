@@ -13,6 +13,7 @@ from app.detect.detector import Assessment, SituationType
 from app.domain.models import Journey, expected_arrival, expected_departure
 from app.plan.csa import Option, alternatives
 from app.plan.models import Certainty, Plan, PlanKind, RideOut
+from app.plan.transfer import PassengerProfile, TransferClass, check_transfer, required_minutes, worst
 from app.rules.engine import (
     RuleRegistry, cancellation_refund, late_running_tdr, missed_connection_tdr, train_cancelled,
     waitlisted_after_chart,
@@ -26,25 +27,42 @@ def _rides(o: Option) -> list[RideOut]:
     return [RideOut(**r.__dict__) for r in o.rides]
 
 
-def _alt_plans(base_id: str, kind: PlanKind, opts: list[Option], **common) -> list[Plan]:
+def transfer_rule(journey: Journey, profile: PassengerProfile | None):
+    """Per-station minimum change time for this passenger (never below the journey's own minimum)."""
+    return lambda stn: required_minutes(stn, profile, journey.min_transfer_minutes)
+
+
+def _alt_plans(base_id: str, kind: PlanKind, opts: list[Option], journey: Journey | None = None,
+               profile: PassengerProfile | None = None, **common) -> list[Plan]:
     plans = []
+    floor = journey.min_transfer_minutes if journey else 30
     for i, o in enumerate(opts, start=1):
         book_by = o.dep - timedelta(minutes=BOOKING_BUFFER_MIN)
         deadline = min(d for d in [common.get("deadline"), book_by] if d is not None)
+        checks = [check_transfer(a.to_stn, a.arr, b.dep, profile, floor) for a, b in zip(o.rides, o.rides[1:])]
+        if any(c.cls == TransferClass.NOT_FEASIBLE for c in checks):
+            continue                       # never offer a change the passenger can't make
+        w = worst(checks)
+        warnings = list(common.get("warnings", []))
+        if w == TransferClass.HIGH_RISK:
+            warnings.append("TRANSFER_HIGH_RISK")
         plans.append(Plan(id=f"{base_id}-{i}", kind=kind, travels=True, arrival=o.arr, rides=_rides(o),
                           needs_new_ticket=True, certainty=Certainty.CHECK_AVAILABILITY,
-                          **{**common, "deadline": deadline}))
+                          transfers=checks, worst_transfer=w, changes=o.changes,
+                          **{**common, "deadline": deadline, "warnings": warnings}))
     return plans
 
 
 def build_plans(journey: Journey, assessment: Assessment, conns: list[Connection],
-                registry: RuleRegistry) -> list[Plan]:
+                registry: RuleRegistry, profile: PassengerProfile | None = None) -> list[Plan]:
     now = assessment.now
     sit = assessment.primary
     live = assessment.live
     first, last = journey.legs[0], journey.legs[-1]
     plans: list[Plan] = []
     start_alt = now + timedelta(minutes=BOOKING_BUFFER_MIN)
+    mt = transfer_rule(journey, profile)
+    alt = dict(journey=journey, profile=profile)
 
     if sit.type in (SituationType.STALE_DATA, SituationType.JOURNEY_OVER):
         return [Plan(id="official", kind=PlanKind.USE_OFFICIAL_CHANNEL, travels=False,
@@ -72,9 +90,9 @@ def build_plans(journey: Journey, assessment: Assessment, conns: list[Connection
                               certainty=Certainty.IF_APPROVED, **common))
             delayed_arr = expected_arrival(last, live[last.train_no])
             opts = [o for o in alternatives(conns, journey.origin, journey.destination, start_alt,
-                                            journey.min_transfer_minutes, {first.train_no})
+                                            mt, {first.train_no})
                     if o.arr < delayed_arr]
-            plans += _alt_plans("tdr-alt", PlanKind.TDR_LATE_PLUS_ALTERNATIVE, opts[:2], **common)
+            plans += _alt_plans("tdr-alt", PlanKind.TDR_LATE_PLUS_ALTERNATIVE, opts[:2], **alt, **common)
         elif tdr.outcome == Outcome.NEEDS_VERIFICATION:
             plans.append(Plan(id="official", kind=PlanKind.USE_OFFICIAL_CHANNEL, travels=False,
                               certainty=Certainty.UNCERTAIN, decisions=[tdr]))
@@ -86,12 +104,11 @@ def build_plans(journey: Journey, assessment: Assessment, conns: list[Connection
         d = (waitlisted_after_chart(leg.ticket, now, registry) if sit.type == SituationType.WAITLISTED_AFTER_CHART
              else train_cancelled(leg.ticket, now, registry))
         common = dict(money_back_paise=d.refund_paise, money_lost_paise=leg.ticket.total_fare_paise - d.refund_paise,
-                      decisions=[d])
+                      decisions=[d], decision_leg=leg.seq)
         plans.append(Plan(id="auto", kind=PlanKind.AUTO_REFUND_WAIT, travels=False,
                           certainty=Certainty.AUTOMATIC, **common))
-        opts = alternatives(conns, leg.from_stn, journey.destination, start_alt, journey.min_transfer_minutes,
-                            {leg.train_no})
-        plans += _alt_plans("auto-alt", PlanKind.AUTO_REFUND_PLUS_ALTERNATIVE, opts[:3], **common)
+        opts = alternatives(conns, leg.from_stn, journey.destination, start_alt, mt, {leg.train_no})
+        plans += _alt_plans("auto-alt", PlanKind.AUTO_REFUND_PLUS_ALTERNATIVE, opts[:3], **alt, **common)
         return plans
 
     if sit.type == SituationType.CONNECTION_AT_RISK:
@@ -99,21 +116,20 @@ def build_plans(journey: Journey, assessment: Assessment, conns: list[Connection
         a = next(l for l in journey.legs if l.seq == sit.leg_seq - 1)
         arr_a = expected_arrival(a, live[a.train_no])
         opts = alternatives(conns, b.from_stn, journey.destination,
-                            max(arr_a + timedelta(minutes=journey.min_transfer_minutes), start_alt),
-                            journey.min_transfer_minutes, {b.train_no})
+                            max(arr_a + timedelta(minutes=mt(b.from_stn)), start_alt), mt, {b.train_no})
         if journey.linked_pnr:
             d = missed_connection_tdr(b.ticket, True, arr_a, now, registry)
             common = dict(money_back_paise=d.refund_paise, money_back_if_approved=True,
                           money_lost_paise=b.ticket.total_fare_paise - d.refund_paise, deadline=d.deadline,
-                          deadline_unverified=True, decisions=[d], warnings=list(d.warnings))
-            plans += _alt_plans("mc-alt", PlanKind.TDR_MISSED_CONNECTION_PLUS_ALTERNATIVE, opts[:3], **common)
+                          deadline_unverified=True, decisions=[d], warnings=list(d.warnings), decision_leg=b.seq)
+            plans += _alt_plans("mc-alt", PlanKind.TDR_MISSED_CONNECTION_PLUS_ALTERNATIVE, opts[:3], **alt, **common)
             plans.append(Plan(id="mc-tdr", kind=PlanKind.TDR_MISSED_CONNECTION_ONLY, travels=False,
                               certainty=Certainty.IF_APPROVED, **common))
         else:
             d = cancellation_refund(b.ticket, now, registry)
             common = dict(money_back_paise=d.refund_paise, money_lost_paise=b.ticket.total_fare_paise - d.refund_paise,
-                          decisions=[d], warnings=list(d.warnings))
-            plans += _alt_plans("cx-alt", PlanKind.CANCEL_NEXT_LEG_PLUS_ALTERNATIVE, opts[:3], **common)
+                          decisions=[d], warnings=list(d.warnings), decision_leg=b.seq)
+            plans += _alt_plans("cx-alt", PlanKind.CANCEL_NEXT_LEG_PLUS_ALTERNATIVE, opts[:3], **alt, **common)
         return plans
 
     return [Plan(id="official", kind=PlanKind.USE_OFFICIAL_CHANNEL, travels=False, certainty=Certainty.UNCERTAIN)]

@@ -8,6 +8,15 @@ import { OptionsScreen } from "./screens/OptionsScreen";
 import { HowToScreen } from "./screens/HowToScreen";
 import { SummaryScreen } from "./screens/SummaryScreen";
 import { Presenter } from "./screens/Presenter";
+import { WhatIfScreen } from "./screens/WhatIfScreen";
+import { WalletScreen } from "./screens/WalletScreen";
+import { MoreScreen } from "./screens/MoreScreen";
+import { ResilienceScreen } from "./screens/ResilienceScreen";
+import { PreferencesScreen } from "./screens/PreferencesScreen";
+import { OfflineCardScreen } from "./screens/OfflineCardScreen";
+import { AssistantScreen } from "./screens/AssistantScreen";
+import { CommunityScreen } from "./screens/CommunityScreen";
+import { FamilyScreen } from "./screens/FamilyScreen";
 
 function useHash(): string[] {
   const [h, setH] = useState(window.location.hash.slice(2) || "");
@@ -31,6 +40,15 @@ export default function App() {
   else if (screen === "howto" && id && planId) body = <HowToScreen id={id} planId={planId} lang={lang} />;
   else if (screen === "summary" && id) body = <SummaryScreen id={id} lang={lang} />;
   else if (screen === "presenter") body = <Presenter lang={lang} />;
+  else if (screen === "whatif" && id) body = <WhatIfScreen id={id} lang={lang} />;
+  else if (screen === "wallet" && id) body = <WalletScreen id={id} lang={lang} />;
+  else if (screen === "more" && id) body = <MoreScreen id={id} lang={lang} />;
+  else if (screen === "resilience" && id) body = <ResilienceScreen id={id} lang={lang} />;
+  else if (screen === "prefs" && id) body = <PreferencesScreen id={id} lang={lang} />;
+  else if (screen === "offline" && id) body = <OfflineCardScreen id={id} lang={lang} />;
+  else if (screen === "assistant" && id) body = <AssistantScreen id={id} lang={lang} />;
+  else if (screen === "community" && id) body = <CommunityScreen id={id} lang={lang} />;
+  else if (screen === "family" && id) body = <FamilyScreen gid={id} lang={lang} />;
   else body = <AddJourney lang={lang} />;
 
   return (

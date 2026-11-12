@@ -9,6 +9,7 @@ version: "2026-11-13"
 
 rule_sets:
   - id: RS-REG-2015
+    version: "2015.1"
     name: "Railway Passengers (Cancellation of Ticket and Refund of Fare) Rules, 2015"
     train_categories: [REGULAR]
     effective_from: 2015-11-12
@@ -30,6 +31,7 @@ rule_sets:
     rac_wl_cancel_cutoff_minutes: 30
 
   - id: RS-REG-2026-APR
+    version: "2026-04-announced.1"
     name: "Revised refund slabs for all trains (announced March 2026)"
     train_categories: [REGULAR]
     effective_from: 2026-04-01
@@ -51,6 +53,7 @@ rule_sets:
     rac_wl_cancel_cutoff_minutes: 30
 
   - id: RS-VBS-AB2-2026
+    version: "2026-01.1"
     name: "Amendment Rules 2026 for Vande Bharat Sleeper and Amrit Bharat II"
     train_categories: [VANDE_BHARAT_SLEEPER, AMRIT_BHARAT_II]
     effective_from: 2026-01-16
@@ -72,6 +75,7 @@ rule_sets:
 
 special_rules:
   - id: TDR-LATE-3H
+    version: "2015.1"
     name: "Train late more than 3 hours and passenger did not travel"
     train_categories: [REGULAR]
     effective_from: 2015-11-12
@@ -85,6 +89,7 @@ special_rules:
     params: {delay_threshold_minutes: 180}
 
   - id: TDR-LATE-3H-VBS
+    version: "2026-01.1"
     name: "Late-running refund on Vande Bharat Sleeper / Amrit Bharat II"
     train_categories: [VANDE_BHARAT_SLEEPER, AMRIT_BHARAT_II]
     effective_from: 2026-01-16
@@ -98,6 +103,7 @@ special_rules:
     params: {}
 
   - id: AUTO-TRAIN-CANCELLED
+    version: "2015.1"
     name: "Train cancelled on its entire run (e-ticket)"
     train_categories: [REGULAR, VANDE_BHARAT_SLEEPER, AMRIT_BHARAT_II]
     effective_from: 2015-11-12
@@ -110,6 +116,7 @@ special_rules:
     params: {}
 
   - id: AUTO-WL-DROPPED
+    version: "2015.1"
     name: "Fully waitlisted e-ticket after chart preparation"
     train_categories: [REGULAR]
     effective_from: 2015-11-12
@@ -122,6 +129,7 @@ special_rules:
     params: {}
 
   - id: TDR-MISSED-CONNECTION
+    version: "2019.1"
     name: "Connecting train missed because the first train was late (linked PNRs)"
     train_categories: [REGULAR]
     effective_from: 2019-04-01

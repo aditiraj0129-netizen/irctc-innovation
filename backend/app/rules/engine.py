@@ -80,15 +80,32 @@ def percent_of(amount_paise: int, percent: int) -> int:
     return (amount_paise * percent + 50) // 100
 
 
+def unresolved_conditions(rs_or_rule) -> list[str]:
+    """Everything about this rule that we have NOT verified yet. Shown to the passenger."""
+    out = []
+    if rs_or_rule.legal_status == LegalStatus.ANNOUNCED:
+        out.append("RULE_NOT_YET_NOTIFIED")
+    if rs_or_rule.source.last_verified is None:
+        out.append("SOURCE_NOT_YET_CHECKED")
+    if getattr(rs_or_rule, "needs_verification", False):
+        out.append("INTERPRETATION_NEEDS_VERIFICATION")
+    return out
+
+
 def _base(kind: str, rs_or_rule, **kw) -> Decision:
     src = rs_or_rule.source
     return Decision(
         kind=kind,
         rule_set_id=getattr(rs_or_rule, "id", None),
+        rule_version=rs_or_rule.version,
+        rule_name=rs_or_rule.name,
+        applies_to_categories=list(rs_or_rule.train_categories),
+        effective_from=rs_or_rule.effective_from,
         legal_status=rs_or_rule.legal_status,
         source_title=src.title,
         source_url=src.url,
         last_verified=src.last_verified,
+        unresolved=unresolved_conditions(rs_or_rule),
         **kw,
     )
 

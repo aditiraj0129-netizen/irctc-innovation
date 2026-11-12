@@ -1,0 +1,14 @@
+{
+  "id": "family_waitlisted",
+  "title": {"en": "Family group: 2 members still waitlisted", "hi": "परिवार समूह: 2 सदस्य अभी वेटिंग में"},
+  "pnr": "8100000006",
+  "group": "demo_family",
+  "start_clock": "2026-12-15T13:05:00+05:30",
+  "legs": [
+    {"train_no": "90301", "run_date": "2026-12-15", "from": "NDLS", "to": "PNBE",
+     "class": "3A", "status": "WAITLISTED", "fare_paise": 165000, "passengers": 2}
+  ],
+  "events": [
+    {"train_no": "90301", "type": "CHART_PREPARED", "chart_status": "WAITLISTED", "observed_at": "2026-12-15T13:00:00+05:30"}
+  ]
+}

@@ -17,6 +17,8 @@ class Priority(str, Enum):
     TIME = "time"      # reach soonest
     MONEY = "money"    # keep the most money already paid
     RISK = "risk"      # most certain outcome
+    TRANSFERS = "transfers"   # fewest changes of train
+    FAMILY = "family"  # keep the group together (group logic lives in family service; alone = RISK)
 
 
 def _arr(p: Plan) -> float:
@@ -25,10 +27,12 @@ def _arr(p: Plan) -> float:
 
 def sort_key(p: Plan, priority: Priority) -> tuple:
     if priority == Priority.TIME:
-        return (0 if p.travels else 1, _arr(p), -p.certainty, p.money_lost_paise)
+        return (0 if p.travels else 1, _arr(p), p.transfer_risk, -p.certainty, p.money_lost_paise)
     if priority == Priority.MONEY:
-        return (p.money_lost_paise, p.needs_new_ticket, -p.certainty, _arr(p))
-    return (-p.certainty, p.money_lost_paise, _arr(p))
+        return (p.money_lost_paise, p.needs_new_ticket, -p.certainty, p.transfer_risk, _arr(p))
+    if priority == Priority.TRANSFERS:
+        return (0 if p.travels else 1, p.changes, p.transfer_risk, _arr(p), p.money_lost_paise)
+    return (-p.certainty, p.transfer_risk, p.money_lost_paise, _arr(p))
 
 
 def rank(plans: list[Plan], priority: Priority) -> list[Plan]:
@@ -47,4 +51,8 @@ def rank(plans: list[Plan], priority: Priority) -> list[Plan]:
             p.reasons.append({"key": "KEEPS_MORE_MONEY", "paise": nxt.money_lost_paise - p.money_lost_paise})
         if p.certainty > nxt.certainty:
             p.reasons.append({"key": "MORE_CERTAIN"})
+        if p.travels and nxt.travels and p.changes < nxt.changes:
+            p.reasons.append({"key": "FEWER_CHANGES"})
+        if p.travels and nxt.travels and p.transfer_risk < nxt.transfer_risk:
+            p.reasons.append({"key": "SAFER_TRANSFER"})
     return ordered

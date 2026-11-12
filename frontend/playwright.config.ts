@@ -12,7 +12,8 @@ export default defineConfig({
     launchOptions: process.env.CHROME_PATH ? { executablePath: process.env.CHROME_PATH } : {},
   },
   webServer: {
-    command: "cd ../backend && python -m uvicorn app.main:app --port 8000",
+    // The E2E run makes many calls per minute from one IP, so the rate limit is raised for tests only.
+    command: "cd ../backend && RATE_LIMIT_PER_MIN=5000 python -m uvicorn app.main:app --port 8000",
     url: "http://localhost:8000/api/health",
     reuseExistingServer: true,
     timeout: 30_000,

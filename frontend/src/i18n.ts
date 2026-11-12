@@ -1,4 +1,5 @@
 import type { Lang } from "./api";
+import { en2, hi2 } from "./i18n_more";
 
 type Dict = Record<string, string>;
 
@@ -239,6 +240,17 @@ const steps: Record<Lang, Record<string, string[]>> = {
     USE_OFFICIAL_CHANNEL: ["RailOne या NTES पर लाइव स्टेटस देखें।", "मदद के लिए 139 पर कॉल करें।"],
   },
 };
+
+Object.assign(en, en2);
+Object.assign(hi, hi2);
+
+/** Translate a backend code with a prefix; unknown codes become readable text instead of raw keys. */
+export function tc(lang: Lang, prefix: string, code: string, vars: Record<string, string> = {}): string {
+  const k = prefix + code;
+  if ((lang === "hi" ? hi : en)[k] ?? en[k]) return t(lang, k, vars);
+  const s = code.toLowerCase().replace(/_/g, " ");
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
 
 export function t(lang: Lang, key: string, vars: Record<string, string> = {}): string {
   const s = (lang === "hi" ? hi : en)[key] ?? en[key] ?? key;

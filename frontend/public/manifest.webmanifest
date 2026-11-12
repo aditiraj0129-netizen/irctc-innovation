@@ -1,0 +1,9 @@
+{
+  "name": "Agla Kadam (prototype, simulated data)",
+  "short_name": "Agla Kadam",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#14325c",
+  "description": "Your next step when your train journey changes. Prototype with simulated data; not an official IRCTC app."
+}

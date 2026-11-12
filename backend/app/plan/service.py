@@ -13,6 +13,7 @@ from app.plan.builder import build_plans
 from app.plan.models import Plan
 from app.plan.ranker import Priority, rank
 from app.plan.rights_clock import RightsClock, build_rights_clock
+from app.plan.transfer import PassengerProfile
 from app.rules.engine import RuleRegistry
 
 
@@ -43,15 +44,18 @@ class Result(BaseModel):
 
 
 def plans_at(journey: Journey, events: list[Event], now: datetime, priority: Priority,
-             conns: list[Connection], assume_fresh: bool = False) -> tuple[Assessment, list[Plan]]:
+             conns: list[Connection], assume_fresh: bool = False,
+             profile: PassengerProfile | None = None) -> tuple[Assessment, list[Plan]]:
     a = detect(journey, events, now, assume_fresh=assume_fresh)
-    return a, rank(build_plans(journey, a, conns, registry()), priority)
+    return a, rank(build_plans(journey, a, conns, registry(), profile), priority)
 
 
-def assess(journey: Journey, events: list[Event], now: datetime, priority: Priority = Priority.TIME) -> Result:
+def assess(journey: Journey, events: list[Event], now: datetime, priority: Priority = Priority.TIME,
+           profile: PassengerProfile | None = None) -> Result:
     conns = connections_for(journey)
-    a, plans = plans_at(journey, events, now, priority, conns)
+    a, plans = plans_at(journey, events, now, priority, conns, profile=profile)
     clock = build_rights_clock(journey, now, plans, registry(),
-                               lambda t: plans_at(journey, events, t, priority, conns, assume_fresh=True)[1],
+                               lambda t: plans_at(journey, events, t, priority, conns, assume_fresh=True,
+                                                  profile=profile)[1],
                                show_cancel_windows=a.primary.type in CANCELLABLE)
     return Result(assessment=a, plans=plans, rights_clock=clock)

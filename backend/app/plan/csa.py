@@ -14,22 +14,30 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
+from typing import Callable, Union
 
 from app.data.timetable import Connection
 
+# Minimum change time: one number for every station, or a function of the station
+# (Station Transfer Intelligence passes a function that knows the passenger's needs).
+TransferRule = Union[int, Callable[[str], int]]
+
+
+def _mt(rule: TransferRule, stn: str) -> timedelta:
+    return timedelta(minutes=rule(stn) if callable(rule) else rule)
+
 def earliest_arrival(conns: list[Connection], origin: str, dest: str, start: datetime,
-                     min_transfer: int, exclude_trains: set[str] = frozenset()) -> datetime | None:
+                     min_transfer: TransferRule, exclude_trains: set[str] = frozenset()) -> datetime | None:
     """Connection Scan: earliest arrival at dest leaving origin at/after start."""
     best: dict[str, datetime] = {origin: start}
     on_train: dict[tuple[str, object], bool] = {}   # (train, run_date) -> we can be on it
-    mt = timedelta(minutes=min_transfer)
     for c in conns:                                  # already sorted by departure
         if c.train_no in exclude_trains:
             continue
         key = (c.train_no, c.run_date)
         reach = best.get(c.from_stn)
         can_board = reach is not None and (
-            (c.from_stn == origin and c.dep >= reach) or (c.from_stn != origin and c.dep >= reach + mt))
+            (c.from_stn == origin and c.dep >= reach) or (c.from_stn != origin and c.dep >= reach + _mt(min_transfer, c.from_stn)))
         if on_train.get(key) or can_board:
             on_train[key] = True
             if c.to_stn not in best or c.arr < best[c.to_stn]:
@@ -86,17 +94,16 @@ def _rides_from(conns: list[Connection], origin: str, start: datetime, exclude: 
     return rides
 
 
-def alternatives(conns: list[Connection], origin: str, dest: str, start: datetime, min_transfer: int,
+def alternatives(conns: list[Connection], origin: str, dest: str, start: datetime, min_transfer: TransferRule,
                  exclude_trains: set[str] = frozenset(), limit: int = 4) -> list[Option]:
     """Options with at most one change, earliest arrival first, then fewer changes."""
-    mt = timedelta(minutes=min_transfer)
     options: dict[tuple, Option] = {}
     for r1 in _rides_from(conns, origin, start, set(exclude_trains)):
         if r1.to_stn == dest:
             o = Option([r1])
             options[o.key] = o
             continue
-        for r2 in _rides_from(conns, r1.to_stn, r1.arr + mt, set(exclude_trains) | {r1.train_no}):
+        for r2 in _rides_from(conns, r1.to_stn, r1.arr + _mt(min_transfer, r1.to_stn), set(exclude_trains) | {r1.train_no}):
             if r2.to_stn == dest:
                 o = Option([r1, r2])
                 options[o.key] = o

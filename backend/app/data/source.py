@@ -39,6 +39,7 @@ class Scenario:
         self.title: dict = raw["title"]
         self.pnr: str = raw["pnr"]
         self.start_clock: datetime = ensure_aware(datetime.fromisoformat(raw["start_clock"]), "start_clock")
+        self.group: str | None = raw.get("group")
         stops = load_stops()
         names = train_names(stops)
         legs = []
