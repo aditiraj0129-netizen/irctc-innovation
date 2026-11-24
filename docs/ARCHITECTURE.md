@@ -74,3 +74,60 @@ flowchart TD
 ## Bugs found and fixed
 
 See `docs/TEST_REPORT.md` for the full list with the test that guards each fix.
+
+## Next round additions
+
+Still one modular monolith. The new parts read the same journey, events and rules as everything else.
+
+```mermaid
+flowchart TD
+  PROV["Providers (interfaces)<br/>Simulated* now · Official* stubs raise ProviderNotConfigured"] --> EV[Journey + Events]
+  EV --> G["Journey Recovery Graph<br/>graph/journey_graph.py<br/>nodes, RIDE/TRANSFER edges, cause→effect trace"]
+  G --> REC["Recovery view<br/>graph/recovery.py<br/>urgency, consequence, next steps, rights"]
+  RULES["Rules engine"] --> REC
+  PLAN["Planner + ranker"] --> REC
+  RULES --> KB["Knowledge corpus<br/>rules YAML + curated docs, provenance, injection filter"]
+  KB --> RET["Retriever protocol<br/>BM25 (EN/HI/Hinglish), as_of filter"]
+  RET --> GA["Grounded answers with citations"]
+  TOOLS["Copilot tools (read-only, validated)"] --> CP["Journey Copilot<br/>deterministic planner · optional LLM (validated, PII removed)"]
+  G & REC & PLAN & RULES & GA --> TOOLS
+  REC --> CACHE["TTL cache"] --> API["FastAPI /api and /api/v1"]
+  CP & GA --> API
+  API --> UI["React: Home · My journeys · Journey (graph timeline) · Disruption Centre · Options ·<br/>What-If compare · Wallet stepper · Copilot · Offline · Settings (accessibility)"]
+```
+
+| New module | Job |
+| --- | --- |
+| `app/graph/journey_graph.py` | Builds the connected-journey graph from events every time (no hidden state) and explains how a delay spreads |
+| `app/graph/recovery.py` | One "what now?" view: urgency, consequence, next steps, rights |
+| `app/knowledge/` | Corpus, retriever, grounded answers (see `docs/AI_ARCHITECTURE.md`) |
+| `app/copilot/` | Tools + planner + composer (see `docs/AI_ARCHITECTURE.md`) |
+| `app/providers/` | Data-source interfaces so official feeds can replace simulated ones |
+| `app/core/cache.py` | Small in-process TTL cache (no Redis needed at this scale) |
+| `frontend/src/screens/{Home,MyJourneys,Disruption,Copilot,Settings}Screen.tsx` | New screens; old screens and routes kept |
+
+Scaling plan, proportionate: one process handles the demo easily; next steps would be a real database
+(`STORE_PATH` → Postgres), more instances behind a load balancer (the app keeps no per-user state in memory except
+the short cache), and provider-side caching of live status. No Kafka, Kubernetes or microservices are needed for this.
+
+## Decision upgrade: PREDICT → DECIDE → RECOVER
+
+```mermaid
+flowchart LR
+  EV["Journey events<br/>(+ station per reading)"] --> DP["Delay Propagation Engine<br/>predict/delay.py"]
+  NET["Route sections, other trains<br/>network.yaml + network_events"] --> DP
+  WX["WeatherProvider<br/>Simulated (demo) · IMD stub"] --> DP
+  DP --> CR["Connection Risk Engine<br/>predict/connection.py"]
+  XFER["Transfer times + passenger needs"] --> CR
+  CR --> RE["JourneyRecoveryEngine<br/>recover/engine.py"]
+  TT["Timetable"] --> RE
+  BUS["BusProvider<br/>demo samples · none"] --> RE
+  RULES["Rules engine"] --> DM["Decision model<br/>decide/decision.py"]
+  DP & CR & RE --> DM
+  DM --> API["/api/v1/.../decision · prediction · recovery-options"]
+  DM --> CP["Copilot tools (read-only)"]
+  API --> UI["Decide screen"]
+```
+
+Still one modular monolith. No new services, queues or databases. Every new engine is a plain Python module with
+its own tests, and every external data source is behind an interface that refuses (`ProviderNotConfigured`) instead of pretending.

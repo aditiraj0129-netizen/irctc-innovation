@@ -53,3 +53,20 @@ disappears within 3 seconds: "the rights change live as the delay changes".
 2. **Recorded clip:** record steps 1–8 once while everything works (macOS: `Cmd+Shift+5` → Record selected portion).
    Keep the file on the desktop and on a USB stick.
 3. **The deck itself:** slide 5 already shows three real screens.
+
+## Decision demo: PREDICT → DECIDE → RECOVER (about 90 seconds)
+
+Open http://localhost:5173 (or :8000 in single-server mode). Every step uses the real backend; all data is simulated.
+
+| Step | Click | Say (one line) |
+| --- | --- | --- |
+| 1 | Home → demo **8100000009** (delay getting worse) → **What should I do?** | "20 minutes late — but is it getting worse? Agla Kadam reads the trend: 0, 10, 20 minutes." |
+| 2 | Point at the red header and the **Recommended next step** | "Connection is *high risk*. It tells me exactly what to do: stay on the train, keep train 90811 ready, and check again at New Delhi — more than 35 minutes late means book the backup." |
+| 3 | Point at the **Cancel** card | "And don't cancel the second ticket: cancelling returns ₹0, but if I miss it, a TDR may return ₹645 — if approved. No promises." |
+| 4 | Scroll to **Will the delay grow or recover?** | "Two late trains are just ahead on the same track. The opposite-direction train is *not* counted. No fake percentages: no history, so no probabilities." |
+| 5 | Back to Home → demo **8100000011** (missed) → Decide | "Now the connection is impossible. Book 90823 tonight, file the TDR before 23:08. Also: Nizamuddin option, unreserved rules, sample buses clearly marked, tomorrow with Tatkal timing." |
+| 6 | Demo **8100000012** → Decide → money table | "Cancel now: ₹660. After 01:30: ₹0. Decide by 01:29 — from the versioned rules, labelled *announced, not yet confirmed*." |
+| 7 | Copilot → type *Can I use a general ticket?* (or *Explain the safest option in Hindi*) | "The Copilot explains the same answer in plain English or Hindi, with sources. It can't book, cancel or invent anything." |
+
+Other decision demos: **8100000008** (delay recovering → tight but fine, stay and watch),
+**8100000010** (fog warning ahead; the expired morning warning is ignored), **8100000013** (next-day recovery and Tatkal).

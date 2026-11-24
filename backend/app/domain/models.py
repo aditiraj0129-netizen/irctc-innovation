@@ -41,7 +41,9 @@ class Journey(BaseModel):
     id: str
     pnr_label: str                      # masked, e.g. "81xxxxxx01 (simulated)"
     title: str
-    legs: list[Leg] = Field(min_length=1, max_length=2)
+    # Up to 4 connected trains. The graph, twin and detector handle any number; the plan builder
+    # re-plans from the first broken change of train onwards.
+    legs: list[Leg] = Field(min_length=1, max_length=4)
     linked_pnr: bool = False
     vikalp_opted: bool = False
     min_transfer_minutes: int = Field(default=30, ge=5, le=240)   # OUR assumption, user can change
@@ -84,6 +86,8 @@ class Event(BaseModel):
     chart_status: TicketStatus | None = None
     observed_at: datetime
     source: EventSource = EventSource.SIMULATED
+    # Where the observation was made (optional). Lets the delay engine see a trend station by station.
+    station: str | None = Field(default=None, pattern=r"^[A-Z]{2,5}$")
 
     @field_validator("observed_at")
     @classmethod

@@ -57,6 +57,10 @@ class Scenario:
                                vikalp_opted=raw.get("vikalp_opted", False),
                                min_transfer_minutes=raw.get("min_transfer_minutes", 30))
         self.events = [Event(**{**e, "source": EventSource.SIMULATED}) for e in raw.get("events", [])]
+        # Observations of OTHER trains on the network (used only by the delay engine's congestion indicator).
+        self.network_events = [Event(**{**e, "source": EventSource.SIMULATED}) for e in raw.get("network_events", [])]
+        # Demo-only simulated fog warnings (never real IMD data).
+        self.weather_warnings: list[dict] = list(raw.get("weather_warnings", []))
 
 
 def load_scenarios() -> dict[str, Scenario]:

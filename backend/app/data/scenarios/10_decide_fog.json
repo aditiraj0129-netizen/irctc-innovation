@@ -1,0 +1,87 @@
+{
+ "id": "decide_fog",
+ "pnr": "8100000010",
+ "title": {
+  "en": "Decision demo 3: fog warning on the route ahead",
+  "hi": "निर्णय डेमो 3: आगे के रास्ते पर कोहरे की चेतावनी"
+ },
+ "start_clock": "2026-12-23T14:50:00+05:30",
+ "linked_pnr": true,
+ "min_transfer_minutes": 20,
+ "legs": [
+  {
+   "train_no": "90721",
+   "run_date": "2026-12-23",
+   "from": "BPL",
+   "to": "NDLS",
+   "class": "3A",
+   "status": "CONFIRMED",
+   "fare_paise": 132000,
+   "passengers": 1
+  },
+  {
+   "train_no": "90821",
+   "run_date": "2026-12-23",
+   "from": "NDLS",
+   "to": "CDG",
+   "class": "CC",
+   "status": "CONFIRMED",
+   "fare_paise": 64500,
+   "passengers": 1
+  }
+ ],
+ "events": [
+  {
+   "train_no": "90721",
+   "type": "DEPARTED",
+   "observed_at": "2026-12-23T09:31:00+05:30",
+   "station": "BPL"
+  },
+  {
+   "train_no": "90721",
+   "type": "DELAY",
+   "observed_at": "2026-12-23T13:00:00+05:30",
+   "delay_minutes": 20,
+   "station": "JHS"
+  },
+  {
+   "train_no": "90721",
+   "type": "DELAY",
+   "observed_at": "2026-12-23T14:00:00+05:30",
+   "delay_minutes": 22
+  },
+  {
+   "train_no": "90721",
+   "type": "DELAY",
+   "observed_at": "2026-12-23T14:45:00+05:30",
+   "delay_minutes": 20
+  }
+ ],
+ "network_events": [],
+ "weather_warnings": [
+  {
+   "id": "FOG-SIM-AGC-NDLS",
+   "severity": "DENSE",
+   "stations": [
+    "AGC",
+    "NDLS"
+   ],
+   "issued_at": "2026-12-23T12:00:00+05:30",
+   "valid_from": "2026-12-23T14:00:00+05:30",
+   "valid_to": "2026-12-23T23:00:00+05:30",
+   "source": "SIMULATED_DEMO (IMD-style warning, not real)"
+  },
+  {
+   "id": "FOG-SIM-JHS-AGC-MORNING",
+   "severity": "MODERATE",
+   "stations": [
+    "JHS",
+    "AGC"
+   ],
+   "issued_at": "2026-12-23T04:00:00+05:30",
+   "valid_from": "2026-12-23T05:00:00+05:30",
+   "valid_to": "2026-12-23T11:00:00+05:30",
+   "source": "SIMULATED_DEMO (IMD-style warning, not real)"
+  }
+ ]
+}

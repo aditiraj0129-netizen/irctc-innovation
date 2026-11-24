@@ -1,0 +1,38 @@
+// A few extra labels for the next-round screens (plan kinds, activity, copilot, settings).
+type Dict = Record<string, string>;
+export const en4: Dict = {
+  pk_TRAVEL_AS_BOOKED: "Travel as booked", pk_CANCEL_NOW: "Cancel now", pk_FILE_TDR_LATE: "File TDR (train late)",
+  pk_AUTO_REFUND_WAIT: "Wait for automatic refund", pk_AUTO_REFUND_PLUS_ALTERNATIVE: "Automatic refund + another train",
+  pk_TDR_MISSED_CONNECTION_PLUS_ALTERNATIVE: "File TDR for missed connection + another train",
+  pk_ALTERNATIVE_ROUTE: "Another route", pk_WAIT_FOR_TRAIN: "Wait for the train",
+  act_opened: "opened", act_asked: "asked Copilot", act_whatif: "tried What-If",
+  arrive_at: "arrive {t}", money_back_short: "{m} back", if_approved_short: "if approved", travels_no: "no travel",
+  deadline: "Deadline",
+  cp_you: "You", cp_bot: "Agla Kadam", cp_empty: "Ask about this journey. Try one of these:", cp_send: "Send",
+  cp_label: "Your question", cp_tools: "Tools used (read-only)", cp_clarify: "Please clarify",
+  cp_safe: "Copilot can only read your journey and the rules. It cannot book, cancel or file anything.",
+  cp_mic: "Speak", cp_listening: "Listening…", cp_voice_off: "Voice input is not available in this browser.",
+  data_providers: "Data providers in use", dash_none: "No journeys saved on this device yet.",
+  journeys_add_more: "Add another journey", main_badge: "Main demo",
+  rights_none: "No refund right applies right now.",
+  conf_heuristic: "Labels are rule-based, not measured probabilities.",
+  s_CONNECTION_BROKEN: "Your connecting train at {station} will likely be missed. Act now.",
+};
+export const hi4: Dict = {
+  pk_TRAVEL_AS_BOOKED: "जैसा बुक है वैसे यात्रा", pk_CANCEL_NOW: "अभी रद्द करें", pk_FILE_TDR_LATE: "TDR फाइल करें (ट्रेन लेट)",
+  pk_AUTO_REFUND_WAIT: "अपने-आप रिफंड का इंतज़ार", pk_AUTO_REFUND_PLUS_ALTERNATIVE: "अपने-आप रिफंड + दूसरी ट्रेन",
+  pk_TDR_MISSED_CONNECTION_PLUS_ALTERNATIVE: "छूटे कनेक्शन का TDR + दूसरी ट्रेन",
+  pk_ALTERNATIVE_ROUTE: "दूसरा रास्ता", pk_WAIT_FOR_TRAIN: "ट्रेन का इंतज़ार",
+  act_opened: "खोली", act_asked: "कोपायलट से पूछा", act_whatif: "अगर-तो आज़माया",
+  arrive_at: "पहुँच {t}", money_back_short: "{m} वापस", if_approved_short: "मंज़ूरी पर", travels_no: "यात्रा नहीं",
+  deadline: "आखिरी समय",
+  cp_you: "आप", cp_bot: "अगला कदम", cp_empty: "इस यात्रा के बारे में पूछें। जैसे:", cp_send: "भेजें",
+  cp_label: "आपका सवाल", cp_tools: "इस्तेमाल हुए टूल (सिर्फ़ पढ़ना)", cp_clarify: "कृपया साफ़ बताएँ",
+  cp_safe: "कोपायलट सिर्फ़ आपकी यात्रा और नियम पढ़ सकता है। वह बुक, रद्द या फाइल नहीं कर सकता।",
+  cp_mic: "बोलें", cp_listening: "सुन रहा है…", cp_voice_off: "इस ब्राउज़र में आवाज़ इनपुट उपलब्ध नहीं।",
+  data_providers: "इस्तेमाल हो रहे डेटा स्रोत", dash_none: "इस डिवाइस पर अभी कोई यात्रा सेव नहीं।",
+  journeys_add_more: "एक और यात्रा जोड़ें", main_badge: "मुख्य डेमो",
+  rights_none: "अभी कोई रिफंड अधिकार लागू नहीं।",
+  conf_heuristic: "ये लेबल नियमों पर आधारित हैं, मापी गई संभावना नहीं।",
+  s_CONNECTION_BROKEN: "{station} पर आपकी कनेक्टिंग ट्रेन शायद छूट जाएगी। अभी कदम उठाएँ।",
+};

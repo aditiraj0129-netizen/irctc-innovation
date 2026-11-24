@@ -40,6 +40,18 @@ from app.store import Store
 from app.twin.twin import build_twin
 from app.wallet.wallet import build_wallet, export_text, valid_transition
 from app.whatif.simulator import simulate
+from app.graph.journey_graph import build_graph
+from app.graph.recovery import build_recovery
+from app.copilot.copilot import run_copilot
+from app.copilot.tools import ToolContext
+from app.knowledge.corpus import corpus
+from app.knowledge.grounded import grounded_answer
+from app.core.cache import TTLCache
+from app.providers import build_providers
+from app.decide.decision import build_decision
+from app.predict.evaluation import EVALUATION_STATUS
+from app.predict.weather import IMDWeatherProvider, SimulatedWeatherProvider
+from app.recover.engine import DemoSampleBusProvider, NoBusProvider
 
 logging.basicConfig(level=logging.INFO, format='{"t":"%(asctime)s","lvl":"%(levelname)s","msg":%(message)s}')
 log = logging.getLogger("agla")
@@ -72,7 +84,9 @@ class State:
         self.store = Store()
         self.community = CommunityService(self.store)
         self.groups = load_groups()
-        self.llm = llm_from_env()
+        self.providers = build_providers(self.source)
+        self.llm = self.providers.ai_model
+        self.cache = TTLCache(ttl_seconds=float(os.getenv("CACHE_TTL_SECONDS", "5")))
         for k, sc in self.scenarios.items():
             seed_reports(self.community, k, sc.start_clock)
 
@@ -89,6 +103,9 @@ def client_ip(request: Request) -> str:
 
 @app.middleware("http")
 async def log_and_limit(request: Request, call_next):
+    # API versioning: /api/v1/... is the stable, versioned path; /api/... stays as an alias for old clients.
+    if request.scope["path"].startswith("/api/v1/"):
+        request.scope["path"] = "/api/" + request.scope["path"][len("/api/v1/"):]
     rid = uuid.uuid4().hex[:8]
     ip = client_ip(request)
     now = time.monotonic()
@@ -169,7 +186,8 @@ class AddJourney(BaseModel):
 
 @app.get("/api/health")
 def health():
-    return {"ok": True, "data": "SIMULATED", "llm": S.llm is not None, "rules_version": registry().data.version}
+    return {"ok": True, "data": "SIMULATED", "llm": S.llm is not None, "rules_version": registry().data.version,
+            "providers": S.providers.describe(), "api_versions": ["v1"]}
 
 
 @app.get("/api/scenarios")
@@ -245,6 +263,93 @@ def get_twin(jid: str):
     return build_twin(journey, events, now, profile).model_dump(mode="json")
 
 
+@app.get("/api/journeys/{jid}/graph")
+def get_graph(jid: str):
+    journey, events, now, profile = ctx(jid)
+    return build_graph(journey, events, now, profile).model_dump(mode="json")
+
+
+@app.get("/api/journeys/{jid}/recovery")
+def get_recovery(jid: str, priority: Priority = Priority.TIME):
+    """Disruption Centre: what happened, when, what it affects, how urgent, what to do next."""
+    journey, events, now, profile = ctx(jid)
+    return {"journey": journey_out(jid), **build_recovery(journey, events, now, priority, profile).model_dump(mode="json")}
+
+
+# ---------- PREDICT -> DECIDE -> RECOVER ----------
+
+WEATHER_PROVIDER = os.getenv("WEATHER_PROVIDER", "simulated" if DEMO_MODE else "imd").lower()
+BUS_PROVIDER = os.getenv("BUS_PROVIDER", "demo" if DEMO_MODE else "off").lower()
+
+
+def _weather(jid: str):
+    if WEATHER_PROVIDER == "simulated" and DEMO_MODE:
+        return SimulatedWeatherProvider(_scenario(jid).weather_warnings)
+    if WEATHER_PROVIDER == "imd":
+        return IMDWeatherProvider()          # refuses until IMD access is granted -> "weather unavailable"
+    return None
+
+
+def _bus():
+    return DemoSampleBusProvider() if (BUS_PROVIDER == "demo" and DEMO_MODE) else NoBusProvider()
+
+
+def _decision(jid: str, priority: Priority):
+    journey, events, now, profile = ctx(jid)
+    return build_decision(journey, events, now, network_events=_scenario(jid).network_events, weather=_weather(jid),
+                          bus=_bus(), profile=profile, priority=priority)
+
+
+@app.get("/api/journeys/{jid}/decision")
+def get_decision(jid: str, priority: Priority = Priority.TIME):
+    """The passenger decision screen: header, six option cards, money comparison, one recommended step."""
+    return {"journey": journey_out(jid), **_decision(jid, priority).model_dump(mode="json")}
+
+
+@app.get("/api/journeys/{jid}/prediction")
+def get_prediction(jid: str):
+    """Delay Propagation Engine + Connection Risk Engine only."""
+    d = _decision(jid, Priority.TIME)
+    return {"prediction": d.prediction.model_dump(mode="json") if d.prediction else None,
+            "connection": d.connection.model_dump(mode="json") if d.connection else None,
+            "evaluation_status": EVALUATION_STATUS}
+
+
+@app.get("/api/journeys/{jid}/recovery-options")
+def get_recovery_options(jid: str, priority: Priority = Priority.TIME):
+    """JourneyRecoveryEngine results: trains, nearby stations, unreserved, buses (demo samples), next day."""
+    return _decision(jid, priority).recovery.model_dump(mode="json")
+
+
+DASHBOARD_MAX = 10
+
+
+@app.get("/api/dashboard")
+def get_dashboard(ids: str = Query("", max_length=400, pattern=r"^[a-z0-9_,]*$")):
+    """Home screen: the passenger's journeys (ids kept on their device), most urgent first."""
+    wanted = [i for i in dict.fromkeys(ids.split(",")) if i][:DASHBOARD_MAX]
+    out = []
+    for jid in wanted:
+        if jid not in S.scenarios:
+            continue                                   # unknown ids are skipped, never an error page
+        journey, events, now, profile = ctx(jid)
+        key = ("recovery", jid, len(events), now.isoformat(), profile.model_dump_json())
+        rec = S.cache.get(key)
+        if rec is None:
+            rec = build_recovery(journey, events, now, Priority.TIME, profile)
+            S.cache.put(key, rec)
+        nxt = next((n for n in rec.graph.nodes if n.kind.value == "DEPART" and n.state.value != "DONE"), None)
+        out.append({"journey": journey_out(jid), "now": now, "status": rec.graph.status.value,
+                    "situation": rec.situation, "urgency": rec.urgency.model_dump(mode="json"),
+                    "data_fresh": rec.data_fresh, "last_updated": rec.last_updated,
+                    "next_departure": nxt.model_dump(mode="json") if nxt else None,
+                    "consequence": rec.consequence, "top_step": rec.next_steps[0].model_dump(mode="json")
+                    if rec.next_steps else None, "profile": profile.model_dump()})
+    order = {"NOW": 0, "SOON": 1, "UNKNOWN": 2, "WATCH": 3, "LATER": 4, "NONE": 5}
+    out.sort(key=lambda d: (order.get(d["urgency"]["level"], 9), d["journey"]["id"]))
+    return {"journeys": out, "data_label": "SIMULATED"}
+
+
 @app.get("/api/journeys/{jid}/whatif")
 def get_whatif(jid: str, priority: Priority = Priority.TIME, delay_increase: int = Query(60, ge=1, le=600),
                wait_minutes: int = Query(30, ge=5, le=720)):
@@ -269,11 +374,22 @@ class ClaimIn(BaseModel):
 
 
 @app.post("/api/journeys/{jid}/wallet/claims")
-def post_claim(jid: str, body: ClaimIn):
+def post_claim(jid: str, body: ClaimIn, request: Request):
+    """Idempotent with the optional `Idempotency-Key` header: a retried request (flaky network) is recorded once."""
+    key = request.headers.get("Idempotency-Key", "")
+    if key:
+        if not (8 <= len(key) <= 80) or not key.replace("-", "").isalnum():
+            raise HTTPException(422, "INVALID_IDEMPOTENCY_KEY")
+        prev = S.store.idem_get(f"{jid}:{key}")
+        if prev is not None:
+            return prev
     w = _wallet(jid)
     if not valid_transition(w, body.item_id, body.status):
         raise HTTPException(422, "INVALID_CLAIM_STEP")
-    return S.store.add_claim(jid, body.item_id, body.status, S.clocks[jid].now().isoformat())
+    out = S.store.add_claim(jid, body.item_id, body.status, S.clocks[jid].now().isoformat())
+    if key:
+        S.store.idem_put(f"{jid}:{key}", jid, out)
+    return out
 
 
 @app.get("/api/journeys/{jid}/wallet/export", response_class=PlainTextResponse)
@@ -326,6 +442,55 @@ def ask(jid: str, body: AskIn):
     return assistant_answer(body.text, body.lang, r.plans, wallet, twin, stale, S.llm).model_dump(mode="json")
 
 
+class HistoryItem(BaseModel):
+    role: str = Field(pattern="^(user|assistant)$")
+    text: str = Field(max_length=900)
+
+
+class CopilotIn(BaseModel):
+    message: str = Field(min_length=1, max_length=500)
+    lang: str = Field("en", pattern="^(en|hi)$")
+    history: list[HistoryItem] = Field(default_factory=list, max_length=10)
+
+
+@app.post("/api/journeys/{jid}/copilot")
+def post_copilot(jid: str, body: CopilotIn):
+    """Journey-aware Copilot. The journey is bound here by the server; tools are read-only and allowlisted."""
+    journey, events, now, profile = ctx(jid)
+    group = _scenario(jid).group
+
+    def family():
+        if not group or group not in S.groups:
+            return None
+        v = group_view(S.groups[group], {k: s.journey for k, s in S.scenarios.items()},
+                       {k: S.source.events_for(k) for k in S.scenarios}, now, Priority.FAMILY)
+        return {"available": True, "divergence": v.divergence,
+                "options": [o.model_dump(mode="json") for o in v.options[:3]]}
+
+    tc = ToolContext(journey=journey, events=events, now=now, profile=profile, lang=body.lang, family=family,
+                     decide=lambda pr: _decision(jid, pr))
+    reply = run_copilot(body.message, tc, [h.model_dump() for h in body.history], S.llm)
+    return reply.model_dump(mode="json")
+
+
+@app.get("/api/knowledge/sources")
+def knowledge_sources():
+    docs, chunks = corpus()
+    return {"documents": [d.model_dump(exclude={"text"}) for d in docs], "chunks": len(chunks),
+            "retriever": "BM25 (lexical) behind a Retriever interface",
+            "note": "Summaries with links to official sources; official PDFs were not copied."}
+
+
+class KnowledgeIn(BaseModel):
+    query: str = Field(min_length=2, max_length=300)
+    lang: str = Field("en", pattern="^(en|hi)$")
+
+
+@app.post("/api/knowledge/search")
+def knowledge_search(body: KnowledgeIn):
+    return grounded_answer(body.query, body.lang, llm=S.llm, as_of=datetime.now().date().isoformat()).model_dump()
+
+
 @app.get("/api/journeys/{jid}/community/reports")
 def list_reports(jid: str):
     _scenario(jid)
@@ -369,6 +534,7 @@ class EventIn(BaseModel):
     type: EventType
     delay_minutes: int | None = Field(default=None, ge=0, le=24 * 60)
     chart_status: TicketStatus | None = None
+    station: str | None = Field(default=None, pattern=r"^[A-Z]{2,5}$")
 
 
 def _demo_only():
@@ -417,7 +583,8 @@ def demo_event(jid: str, body: EventIn):
     if body.type == EventType.DELAY and body.delay_minutes is None:
         raise HTTPException(422, "delay_minutes is required for DELAY")
     ev = Event(train_no=body.train_no, type=body.type, delay_minutes=body.delay_minutes,
-               chart_status=body.chart_status, observed_at=S.clocks[jid].now(), source=EventSource.SIMULATED)
+               chart_status=body.chart_status, observed_at=S.clocks[jid].now(), source=EventSource.SIMULATED,
+               station=body.station)
     S.source.add_event(jid, ev)
     return ev.model_dump(mode="json")
 

@@ -1,4 +1,77 @@
-# Test report (final audit, 13 Nov 2026)
+# Test report
+
+## Decision upgrade (24 Nov 2026)
+
+| Suite | Count | Result |
+| --- | --- | --- |
+| Backend (pytest) | **279** = 231 before + 48 new (`tests/test_decision_engines.py`) | **279 passed, 0 failed, 0 skipped** |
+| End-to-end (Playwright, phone size, 1 worker) | **25** = 20 before + 5 new (`e2e/decide.spec.ts`) | **25 passed** |
+| TypeScript check / production build | — | pass / pass |
+
+No existing test was changed, skipped or deleted.
+
+| Area asked for | Tests |
+| --- | --- |
+| Delay trend calculations | `test_trend_recovering_growing_and_steady`, `test_baseline_model_rules_are_transparent`, `test_a_sudden_jump_is_not_extrapolated_as_a_trend` |
+| Missing observations / stale train data | `test_missing_observations_give_insufficient_evidence_not_a_guess`, `test_stale_running_data_gives_no_range` |
+| Shared-route matching / false congestion correlations | `test_shared_section_matching_counts_only_trains_just_ahead`, `test_false_congestion_correlations_are_rejected` (behind us, on time, old reading, other corridor, opposite direction) |
+| Fog warning expiry / weather provider unavailable | `test_fog_warning_applies_only_on_route_ahead_and_while_valid`, `test_weather_provider_unavailable_is_reported_not_crashing` |
+| Connection feasibility / transfer buffers | `test_connection_feasibility_uses_the_whole_range` (5 scenarios), `test_transfer_buffer_depends_on_passenger_needs` |
+| Alternative ranking / duplicate trains / none available | `test_ranking_is_explained_and_follows_priority`, `test_no_duplicate_or_dominated_trains`, `test_no_alternative_available_gives_a_clear_reason` |
+| Seat availability unknown / provider failures | `test_seat_availability_and_fares_are_never_invented`, `test_buses_only_from_a_configured_provider` |
+| Unreserved travel eligibility | `test_unreserved_eligibility_rules` |
+| Refund comparison / missing ticket info / not every missed connection qualifies | `test_refund_comparison_cancel_now_vs_later`, `test_dont_cancel_when_a_claim_is_worth_more`, `test_missing_ticket_information_is_explained`, `test_missed_connection_does_not_automatically_qualify` |
+| Never a blank section | `test_every_card_is_filled_never_blank` (all 13 demo journeys × 6 cards) |
+| Six demo scenarios end to end | `test_six_demo_scenarios_end_to_end` + E2E 21–25 |
+| AI hallucinated train data / invalid tool calls / no RAG source | `test_copilot_rejects_hallucinated_train_data`, `test_invalid_tool_calls_are_refused`, `test_rag_cites_unreserved_and_tatkal_guidance_or_says_no_source`, `test_copilot_decision_questions` (8 questions) |
+| Evaluation maths (no model evaluated) | `test_evaluation_maths_on_hand_made_numbers` |
+
+Bugs found and fixed during this work:
+- **Two delay readings 5 min apart were read as a huge trend.** Fixed with a 30-minute minimum span and a ±60 min cap, and a test was added.
+- **The mobile section tabs scrolled sideways and hid "Wallet".** Fixed: two rows on phones.
+- **A new translation key replaced the Options screen's "Why this is first" heading.** Fixed by renaming the key.
+- **A backup train's boarding station was shown as New Delhi when it leaves from Nizamuddin.** Fixed.
+
+Not tested here: real IMD, NTES, availability or bus data (not available); calibrated probabilities (no history);
+a real paid LLM (tested with fake LLMs).
+
+---
+
+## Next round (24 Nov 2026)
+
+Environment: Linux workspace, Python 3.13, Node 22, system Chrome for Playwright (phone size, 1 worker).
+
+| Suite | Count | Result |
+| --- | --- | --- |
+| Backend (pytest) | **231** = 192 before + 39 new | **231 passed, 0 failed, 0 skipped** |
+| End-to-end (Playwright) | **20** = 15 before + 5 new | **20 passed** |
+| TypeScript check / production build | — | pass / pass |
+
+No existing test was deleted, skipped or changed (all new tests are in new files:
+`test_journey_graph.py`, `test_knowledge_copilot.py`, `test_reliability.py`, `e2e/nextround.spec.ts`).
+
+New coverage:
+
+| Area | Tests |
+| --- | --- |
+| Journey graph and delay propagation (2- and 3-train journeys, cancelled, stale, conflicting events, passenger profile) | `test_journey_graph.py` (7) |
+| Disruption Centre: urgency, rights, no advice on stale data | `test_recovery_rights_and_urgency`, `test_recovery_stale_gives_no_advice` |
+| RAG: provenance on every chunk, EN/HI/Hinglish retrieval, expired rules filtered, no-source refusal, injection dropped at ingestion, LLM rewording validated | `test_knowledge_copilot.py` |
+| Copilot: tool allow-list and argument validation, hypothetical tools never store events, natural-language What-If (parametrised), out-of-range asks back, prompt injection, stale refusal, unsafe LLM plans rejected, PNR/phone/email removed before any LLM call | `test_knowledge_copilot.py` |
+| Reliability: provider stubs refuse, TTL cache, idempotent claims, health | `test_reliability.py` |
+| E2E 16 home dashboard (only journey ids stored, never the PNR) · 17 central Bhopal→Delhi→Chandigarh flow (twin → disruption → options → What-If compare → Wallet) · 18 Copilot natural-language What-If with tools and source · 19 Copilot ignores an instruction to invent a refund · 20 accessibility settings persist | `e2e/nextround.spec.ts` |
+
+Bugs found during this round and fixed: translation keys from the new screens overwrote older ones
+(e.g. "deadline not yet officially confirmed" in Hindi) — caught by E2E 4, keys renamed; Copilot marked a
+rules-engine answer as "no reliable source" — fixed and tested; Copilot "open family" link pointed to a
+non-existent page — now opens the journey's More page; mobile and desktop navigation shared test ids — split.
+
+Not tested here: a real paid LLM (tested with a fake LLM), real IRCTC/NTES data (not available),
+screen-reader software (labels, landmarks and keyboard order were added but not checked with NVDA/VoiceOver).
+
+---
+
+## Earlier: final audit (13 Nov 2026)
 
 Environment: Linux workspace, Python 3.13, Node 20+, system Chrome for Playwright.
 The user's MacBook Air also ran the suite before the audit fixes: **181 backend + 14 E2E passed** (after the

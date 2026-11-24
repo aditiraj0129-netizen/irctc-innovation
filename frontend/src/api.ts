@@ -120,6 +120,47 @@ export interface GroupOption {
   arrival_last: string | null; arrival_spread_minutes: number; changes: number; senior_friendly: boolean; step_free_ok: boolean;
   warnings: string[]; rule_ids: string[]; rank: number;
 }
+// ---------- next round: graph, recovery, dashboard, copilot ----------
+export interface GraphNode {
+  id: string; kind: "DEPART" | "ARRIVE"; leg_seq: number; station: string; train_no: string; scheduled: string;
+  expected: string; delay_minutes: number; state: "OK" | "DELAYED" | "AT_RISK" | "BROKEN" | "DONE";
+  freshness: "FRESH" | "STALE" | "NONE"; last_update: string | null;
+}
+export interface GraphEdge {
+  id: string; kind: "RIDE" | "TRANSFER"; source: string; target: string; required_minutes: number | null;
+  gap_minutes: number | null; margin_minutes: number | null; transfer_class: TransferCheck["cls"] | null; state: GraphNode["state"];
+}
+export interface TraceStep { code: string; node: string | null; edge: string | null; data: Record<string, any> }
+export interface JourneyGraph {
+  journey_id: string; now: string; status: Twin["status"]; nodes: GraphNode[]; edges: GraphEdge[]; trace: TraceStep[];
+  broken_from_leg: number | null; data_label: string;
+}
+export interface Urgency { level: "NOW" | "SOON" | "LATER" | "WATCH" | "NONE" | "UNKNOWN"; decide_by: string | null; minutes_left: number | null }
+export interface NextStep {
+  plan_id: string; plan_kind: string; rank: number; travels: boolean; arrival: string | null; money_back_paise: number;
+  money_back_if_approved: boolean; deadline: string | null; deadline_unverified: boolean; trains: string[]; rule_ids: string[];
+}
+export interface Recovery {
+  journey: Assessment["journey"]; journey_id: string; now: string; situation: string; graph: JourneyGraph;
+  what_happened: { train_no: string; type: string; delay_minutes: number | null; observed_at: string; source: string }[];
+  last_updated: string | null; data_fresh: boolean; affected_legs: number[]; consequence: Record<string, any>;
+  urgency: Urgency; next_steps: NextStep[];
+  rights: { kind: string; stage: string; estimated_refund_paise: number; if_approved: boolean; deadline: string | null;
+    rule_id: string | null; legal_status: string | null; unresolved: string[] }[];
+  recommendation: Recommendation | null; data_label: string;
+}
+export interface DashJourney {
+  journey: Assessment["journey"]; now: string; status: Twin["status"]; situation: string; urgency: Urgency; data_fresh: boolean;
+  last_updated: string | null; next_departure: GraphNode | null; consequence: Record<string, any>; top_step: NextStep | null; profile: Profile;
+}
+export interface Citation { id: string; title: string; source_url: string | null; effective_from: string; version: string; status: string; unresolved: string[] }
+export interface CopilotReply {
+  intent: string; planner: string; answer: string; answer_source: string; clarify: boolean;
+  tool_calls: { tool: string; args: Record<string, unknown>; ok: boolean; error: string | null }[];
+  citations: Citation[]; next_actions: { key: string; route: string | null; tel: string | null }[];
+  no_reliable_source: boolean; warnings: string[]; data_label: string;
+}
+
 export interface GroupView {
   group_id: string; name: { en: string; hi: string }; now: string; group_profile: Profile; divergence: string[];
   timeline: MemberLine[]; options: GroupOption[];
@@ -170,4 +211,33 @@ export const api = {
   report: (id: string, body: object) => req<Report>(`/api/journeys/${id}/community/reports`, { method: "POST", body: JSON.stringify(body) }),
   groups: () => req<{ id: string; name: { en: string; hi: string }; members: number }[]>("/api/groups"),
   group: (gid: string, priority: Priority) => req<GroupView>(`/api/groups/${gid}?priority=${priority}`),
+  graph: (id: string) => req<JourneyGraph>(`/api/v1/journeys/${id}/graph`),
+  recovery: (id: string) => req<Recovery>(`/api/v1/journeys/${id}/recovery`),
+  dashboard: (ids: string[]) => req<{ journeys: DashJourney[] }>(`/api/v1/dashboard?ids=${encodeURIComponent(ids.join(","))}`),
+  copilot: (id: string, message: string, lang: Lang, history: { role: "user" | "assistant"; text: string }[]) =>
+    req<CopilotReply>(`/api/v1/journeys/${id}/copilot`, { method: "POST", body: JSON.stringify({ message, lang, history: history.slice(-6) }) }),
+  knowledge: () => req<{ documents: (Omit<Citation, "unresolved"> & { applies_to: string[]; unresolved: string[]; publisher: string })[]; chunks: number }>("/api/v1/knowledge/sources"),
+};
+
+// ---------- PREDICT -> DECIDE -> RECOVER ----------
+export interface DecisionCard {
+  key: "CONTINUE" | "CANCEL" | "OTHER_TRAIN" | "UNRESERVED" | "BUS" | "NEXT_SERVICE";
+  status: "AVAILABLE" | "NOT_APPLICABLE" | "DATA_MISSING" | "NONE_FOUND" | "NOT_CONFIGURED";
+  recommended: boolean; meaning: string; outcome: Record<string, any>; money: Record<string, any>; risk: string | null;
+  deadline: string | null; deadline_kind: string | null; next_action: Record<string, any>; items: Record<string, any>[];
+  missing: string[]; reason: string | null;
+}
+export interface MoneyRow {
+  key: string; at: string | null; applicable: boolean; reason: string | null; money_back_paise: number | null;
+  charge_paise: number | null; certainty: string; deadline: string | null; travel_outcome: string; risk: string | null;
+  next_step: string; rule_ids: string[]; legal_status: string | null;
+}
+export interface DecisionView {
+  journey: Assessment["journey"]; journey_id: string; now: string; header: Record<string, any>;
+  prediction: Record<string, any> | null; connection: Record<string, any> | null; recovery: Record<string, any>;
+  cards: DecisionCard[]; money: MoneyRow[]; claims: Record<string, any>; recommendation: Record<string, any>;
+  data_label: string;
+}
+export const decideApi = {
+  decision: (id: string, priority: Priority = "time") => req<DecisionView>(`/api/v1/journeys/${id}/decision?priority=${priority}`),
 };

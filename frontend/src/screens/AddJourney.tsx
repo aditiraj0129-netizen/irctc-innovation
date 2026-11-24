@@ -3,7 +3,9 @@ import { api, type Lang } from "../api";
 import { go } from "../router";
 import { t } from "../i18n";
 
-export function AddJourney({ lang }: { lang: Lang }) {
+export const MAIN_DEMO = "bhopal_delhi_chandigarh";
+
+export function AddJourney({ lang, embedded = false }: { lang: Lang; embedded?: boolean }) {
   const [pnr, setPnr] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -25,13 +27,15 @@ export function AddJourney({ lang }: { lang: Lang }) {
 
   return (
     <div className="stack">
-      <section className="hero">
-        <h1>{t(lang, "app_name")}</h1>
-        <p>{t(lang, "tagline")}</p>
-      </section>
+      {!embedded && (
+        <section className="hero">
+          <h1>{t(lang, "app_name")}</h1>
+          <p>{t(lang, "tagline")}</p>
+        </section>
+      )}
 
       <form className="card stack" onSubmit={(e) => { e.preventDefault(); submit(); }}>
-        <h2>{t(lang, "add_title")}</h2>
+        <h2 id="add-journey">{t(lang, "add_title")}</h2>
         <p className="muted">{t(lang, "add_help")}</p>
         <label htmlFor="pnr" className="label">{t(lang, "pnr")}</label>
         <input id="pnr" data-testid="pnr-input" inputMode="numeric" autoComplete="off" maxLength={10}
@@ -44,9 +48,9 @@ export function AddJourney({ lang }: { lang: Lang }) {
       <section className="card stack">
         <h3>{t(lang, "demo_pnrs")}</h3>
         {demos.map((d) => (
-          <button key={d.id} className="demo-row" data-testid={`demo-${d.id}`} onClick={() => { setPnr(d.pnr); submit(d.pnr); }}>
+          <button key={d.id} className={`demo-row ${d.id === MAIN_DEMO ? "demo-hero" : ""}`} data-testid={`demo-${d.id}`} onClick={() => { setPnr(d.pnr); submit(d.pnr); }}>
             <span className="mono">{d.pnr}</span>
-            <span>{d.title[lang]}</span>
+            <span>{d.title[lang]}{d.id === MAIN_DEMO && <> <span className="urg urg-SOON">{t(lang, "main_badge")}</span></>}</span>
           </button>
         ))}
       </section>

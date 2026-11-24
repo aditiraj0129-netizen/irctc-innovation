@@ -44,6 +44,7 @@ export function WalletScreen({ id, lang }: { id: string; lang: Lang }) {
               <strong>{rupees(it.estimated_refund_paise)}</strong> {t(lang, "money_back")}
               {it.if_approved ? ` · ${t(lang, "if_approved")}` : ""} · <span className="muted small">{tc(lang, "stage_", "ESTIMATE")}</span>
             </p>
+            {STEP_OF[it.stage] != null && <Stepper stage={it.stage} lang={lang} />}
             {it.deadline && (
               <p className="small deadline">{t(lang, "act_by")} {dayTime(it.deadline)}
                 {it.minutes_left != null ? ` · ${t(lang, "minutes_left", { m: duration(it.minutes_left, lang) })}` : ""}
@@ -93,4 +94,17 @@ export function WalletScreen({ id, lang }: { id: string; lang: Lang }) {
 
 function summary(d: Record<string, unknown>): string {
   return Object.entries(d).filter(([, v]) => v != null && v !== "SIMULATED").map(([k, v]) => `${k}=${v}`).join(", ");
+}
+
+// Where a claim is on its way: Estimate → Eligible → Filed → Approved → Received.
+// The stage comes from the backend; the passenger marks filing and payment themselves.
+const STEPS = ["ESTIMATE", "ELIGIBLE", "FILED", "APPROVED", "RECEIVED"];
+const STEP_OF: Record<string, number> = { ESTIMATE: 0, ELIGIBLE_TO_FILE: 1, AUTOMATIC_DUE: 1, FILED: 2, APPROVED: 3, RECEIVED: 4 };
+function Stepper({ stage, lang }: { stage: string; lang: Lang }) {
+  const cur = STEP_OF[stage];
+  return (
+    <div className="stepper" data-testid="wallet-stepper" aria-label={`${t(lang, "w_steps_" + STEPS[cur])} (${cur + 1}/5)`} role="img">
+      {STEPS.map((s, i) => <span key={s} className={i < cur ? "done" : i === cur ? "cur" : ""}>{t(lang, "w_steps_" + s)}</span>)}
+    </div>
+  );
 }

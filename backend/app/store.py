@@ -17,6 +17,9 @@ CREATE TABLE IF NOT EXISTS actions (jid TEXT, plan_id TEXT, plan_kind TEXT, at T
 CREATE TABLE IF NOT EXISTS claims (jid TEXT, item_id TEXT, status TEXT, at TEXT);
 CREATE TABLE IF NOT EXISTS preferences (jid TEXT PRIMARY KEY, data TEXT);
 CREATE TABLE IF NOT EXISTS reports (id INTEGER PRIMARY KEY AUTOINCREMENT, data TEXT);
+CREATE TABLE IF NOT EXISTS idempotency (key TEXT PRIMARY KEY, jid TEXT, response TEXT);
+CREATE INDEX IF NOT EXISTS idx_actions_jid ON actions (jid);
+CREATE INDEX IF NOT EXISTS idx_claims_jid ON claims (jid);
 """
 
 
@@ -72,7 +75,15 @@ class Store:
     def reports(self) -> list[tuple[int, dict]]:
         return [(r["id"], json.loads(r["data"])) for r in self._exec("SELECT id, data FROM reports ORDER BY id")]
 
+    def idem_get(self, key: str) -> dict | None:
+        row = self.db.execute("SELECT response FROM idempotency WHERE key=?", (key,)).fetchone()
+        return json.loads(row["response"]) if row else None
+
+    def idem_put(self, key: str, jid: str, response: dict) -> None:
+        self._exec("INSERT OR IGNORE INTO idempotency VALUES (?,?,?)", (key, jid, json.dumps(response)))
+
     def clear_journey(self, jid: str) -> None:
+        self._exec("DELETE FROM idempotency WHERE jid=?", (jid,))
         self._exec("DELETE FROM actions WHERE jid=?", (jid,))
         self._exec("DELETE FROM claims WHERE jid=?", (jid,))
         for rid, d in self.reports():

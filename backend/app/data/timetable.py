@@ -25,7 +25,23 @@ STATIONS: dict[str, dict[str, str]] = {
     "DDU": {"en": "Pt. DD Upadhyaya Jn", "hi": "पं. दीनदयाल उपाध्याय जं."},
     "PNBE": {"en": "Patna Jn", "hi": "पटना जं."},
     "DBG": {"en": "Darbhanga Jn", "hi": "दरभंगा जं."},
+    "BPL": {"en": "Bhopal Jn", "hi": "भोपाल जं."},
+    "JHS": {"en": "Jhansi Jn", "hi": "झाँसी जं."},
+    "AGC": {"en": "Agra Cantt", "hi": "आगरा कैंट"},
+    "UMB": {"en": "Ambala Cantt", "hi": "अंबाला कैंट"},
+    "CDG": {"en": "Chandigarh", "hi": "चंडीगढ़"},
+    "NZM": {"en": "Hazrat Nizamuddin", "hi": "हज़रत निज़ामुद्दीन"},
 }
+
+
+def train_schedule(stops: list[Stop], train_no: str, run_date: date) -> list[tuple[str, datetime | None, datetime | None]]:
+    """(station, scheduled arrival, scheduled departure) for every stop of one run, in order."""
+    out = []
+    for s in sorted((s for s in stops if s.train_no == train_no), key=lambda s: s.seq):
+        day = run_date + timedelta(days=s.day)
+        out.append((s.stn, datetime.combine(day, s.arr, IST) if s.arr else None,
+                    datetime.combine(day, s.dep, IST) if s.dep else None))
+    return out
 
 
 @dataclass(frozen=True)

@@ -1,0 +1,70 @@
+{
+ "id": "decide_recover",
+ "pnr": "8100000008",
+ "title": {
+  "en": "Decision demo 1: 20 min late, delay recovering",
+  "hi": "निर्णय डेमो 1: 20 मिनट लेट, देरी कम हो रही"
+ },
+ "start_clock": "2026-12-21T17:30:00+05:30",
+ "linked_pnr": true,
+ "min_transfer_minutes": 20,
+ "legs": [
+  {
+   "train_no": "90721",
+   "run_date": "2026-12-21",
+   "from": "BPL",
+   "to": "NDLS",
+   "class": "3A",
+   "status": "CONFIRMED",
+   "fare_paise": 132000,
+   "passengers": 1
+  },
+  {
+   "train_no": "90821",
+   "run_date": "2026-12-21",
+   "from": "NDLS",
+   "to": "CDG",
+   "class": "CC",
+   "status": "CONFIRMED",
+   "fare_paise": 64500,
+   "passengers": 1
+  }
+ ],
+ "events": [
+  {
+   "train_no": "90721",
+   "type": "DEPARTED",
+   "observed_at": "2026-12-21T09:31:00+05:30",
+   "station": "BPL"
+  },
+  {
+   "train_no": "90721",
+   "type": "DELAY",
+   "observed_at": "2026-12-21T13:20:00+05:30",
+   "delay_minutes": 40,
+   "station": "JHS"
+  },
+  {
+   "train_no": "90721",
+   "type": "DELAY",
+   "observed_at": "2026-12-21T15:36:00+05:30",
+   "delay_minutes": 30,
+   "station": "AGC"
+  },
+  {
+   "train_no": "90721",
+   "type": "DELAY",
+   "observed_at": "2026-12-21T17:25:00+05:30",
+   "delay_minutes": 20
+  }
+ ],
+ "network_events": [
+  {
+   "train_no": "90723",
+   "type": "DELAY",
+   "observed_at": "2026-12-21T17:10:00+05:30",
+   "delay_minutes": 5
+  }
+ ],
+ "weather_warnings": []
+}

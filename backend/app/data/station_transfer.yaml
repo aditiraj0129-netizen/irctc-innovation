@@ -12,6 +12,12 @@ stations:
   DDU:  {complexity: MEDIUM, walk_minutes: 20}
   PNBE: {complexity: MEDIUM, walk_minutes: 20}
   DBG:  {complexity: LOW, walk_minutes: 10}
+  BPL:  {complexity: MEDIUM, walk_minutes: 18}
+  UMB:  {complexity: MEDIUM, walk_minutes: 15}
+  CDG:  {complexity: LOW, walk_minutes: 10}
+  NZM:  {complexity: MEDIUM, walk_minutes: 15}
+  AGC:  {complexity: MEDIUM, walk_minutes: 15}
+  JHS:  {complexity: MEDIUM, walk_minutes: 15}
 profile_factors:
   walking_speed: {normal: 1.0, slow: 1.5}
   step_free_extra_minutes: {LOW: 0, MEDIUM: 10, HIGH: 15}

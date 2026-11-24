@@ -1,0 +1,18 @@
+{
+  "id": "bhopal_delhi_chandigarh",
+  "title": {"en": "Bhopal → Delhi → Chandigarh: first train running late", "hi": "भोपाल → दिल्ली → चंडीगढ़: पहली ट्रेन लेट"},
+  "pnr": "8100000007",
+  "start_clock": "2026-12-18T04:40:00+05:30",
+  "linked_pnr": true,
+  "min_transfer_minutes": 30,
+  "legs": [
+    {"train_no": "90701", "run_date": "2026-12-17", "from": "BPL", "to": "NDLS",
+     "class": "3A", "status": "CONFIRMED", "fare_paise": 132000, "passengers": 1},
+    {"train_no": "90801", "run_date": "2026-12-18", "from": "NDLS", "to": "CDG",
+     "class": "CC", "status": "CONFIRMED", "fare_paise": 64500, "passengers": 1}
+  ],
+  "events": [
+    {"train_no": "90701", "type": "DEPARTED", "observed_at": "2026-12-17T21:34:00+05:30"},
+    {"train_no": "90701", "type": "DELAY", "delay_minutes": 25, "observed_at": "2026-12-18T04:35:00+05:30"}
+  ]
+}

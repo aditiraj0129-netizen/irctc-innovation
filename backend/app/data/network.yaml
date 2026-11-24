@@ -1,0 +1,54 @@
+# SIMULATED railway network model for the demo. NOT official data.
+#  * Distances are rounded public approximations, for display only.
+#  * recovery_allowance_min = minutes a late train can typically win back on that section. These numbers
+#    are INVENTED placeholders: real values would come from the working timetable (allowances) or history.
+#  * Train categories / priorities / coach types are for the simulated 90xxx trains only (verified: false).
+#  * Bus entries are SAMPLE scenarios for demo mode only: not real timetables, fares or seats.
+label: "Simulated route-section model (not official)"
+
+sections:
+  - {a: BPL,  b: JHS,  km: 291, recovery_allowance_min: 8}
+  - {a: JHS,  b: AGC,  km: 215, recovery_allowance_min: 6}
+  - {a: AGC,  b: NDLS, km: 195, recovery_allowance_min: 10}
+  - {a: NDLS, b: UMB,  km: 199, recovery_allowance_min: 6}
+  - {a: UMB,  b: CDG,  km: 45,  recovery_allowance_min: 2}
+  - {a: NZM,  b: UMB,  km: 205, recovery_allowance_min: 6}
+  - {a: NDLS, b: CNB,  km: 440, recovery_allowance_min: 12}
+  - {a: CNB,  b: PRYJ, km: 195, recovery_allowance_min: 6}
+
+# priority: 1 = highest. general_coaches: has unreserved (General) coaches. reserved: has reserved coaches.
+default_train: {category: EXPRESS, priority: 2, general_coaches: true, reserved: true}
+trains:
+  "90721": {category: EXPRESS,    priority: 2, general_coaches: true,  reserved: true}
+  "90821": {category: CHAIR_CAR,  priority: 2, general_coaches: false, reserved: true}
+  "90801": {category: CHAIR_CAR,  priority: 2, general_coaches: false, reserved: true}
+  "90803": {category: EXPRESS,    priority: 2, general_coaches: true,  reserved: true}
+  "90805": {category: EXPRESS,    priority: 2, general_coaches: true,  reserved: true}
+  "90823": {category: EXPRESS,    priority: 2, general_coaches: true,  reserved: true}
+  "90811": {category: EXPRESS,    priority: 2, general_coaches: true,  reserved: true}
+  "90825": {category: INTERCITY,  priority: 3, general_coaches: true,  reserved: true}
+  "90827": {category: MEMU,       priority: 4, general_coaches: true,  reserved: false}
+  "90809": {category: MEMU,       priority: 4, general_coaches: true,  reserved: false}
+  "90807": {category: INTERCITY,  priority: 3, general_coaches: true,  reserved: true}
+  "90723": {category: INTERCITY,  priority: 3, general_coaches: true,  reserved: true}
+  "90725": {category: EXPRESS,    priority: 2, general_coaches: true,  reserved: true}
+  "90729": {category: EXPRESS,    priority: 2, general_coaches: true,  reserved: true}
+  "90724": {category: INTERCITY,  priority: 3, general_coaches: true,  reserved: true}
+
+# Stations close enough to use instead (time to get there is an ESTIMATE).
+nearby:
+  NDLS: [{code: NZM, minutes: 40, mode: "Metro or taxi (estimate)"}]
+  NZM:  [{code: NDLS, minutes: 40, mode: "Metro or taxi (estimate)"}]
+
+# Demo-only SAMPLE buses. Not real timetables, fares or seats.
+bus_samples:
+  - from_station: NDLS
+    to_station: CDG
+    from_terminal: "ISBT Kashmere Gate, Delhi"
+    to_terminal: "ISBT Sector 43, Chandigarh"
+    access_minutes: 30          # NDLS -> terminal, estimate
+    egress_minutes: 20
+    duration_minutes: 300
+    sample_fare_paise: 60000
+    operator: "Sample state transport bus"
+    departures: ["06:00", "09:00", "12:00", "15:00", "18:00", "21:00", "23:30"]

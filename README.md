@@ -27,6 +27,39 @@ a ticket still waitlisted after the chart, or a cancellation), Agla Kadam:
 | Resilience score | More → Resilience | Experimental, transparent weighted score with every factor shown |
 | Community reports | More → Station reports | Unverified, expiring, de-duplicated passenger reports; personal data rejected; never change options or refunds |
 
+**Critical upgrade: PREDICT → DECIDE → RECOVER.** The app now tells the passenger *what to do next*, not just what happened.
+
+| What's new | Where | What it does |
+| --- | --- | --- |
+| Decide screen | Journey → **Decide** (also "What should I do?" on the alert) | Header ("Your connecting journey is at risk"), one **recommended next step**, six never-blank option cards (continue, cancel, another train, unreserved, bus, wait / next day), money compared (cancel now / wait 15 min / wait until X / later / claim), claim stages kept apart |
+| Delay Propagation Engine | Decide → "Will the delay grow or recover?" | Own-train trend, late trains just ahead on the same track section (with reasons for those *not* counted), fog warnings, recovery allowance → arrival **range** + risk band. **No fake probabilities** |
+| Connection Risk Engine | Decide header and Continue card | Whole arrival range vs. the transfer time this passenger needs: Comfortable / Tight / High risk / Unlikely / Not feasible, plus "if more than X min late at Y, the change fails" |
+| Journey Recovery Engine | Decide cards | Direct, one-change, nearby-station (Nizamuddin), unreserved (rules), sample buses (demo only), next-day with Tatkal timing; one result type per option; transparent ranking |
+| Copilot decision questions | Copilot | "Can I catch the next train?", "If I cancel now, how much?", "Find another train", "Can I use a general ticket?", "Bus?", "Tomorrow?", "Safest option in Hindi" |
+| 6 decision demos | Home → demo list (PNR 8100000008–13) | Recovering delay, worsening delay with congestion, fog, missed connection, cancel-now-or-wait, next-day recovery |
+
+Docs: [Decision clarity audit](docs/DECISION_CLARITY_AUDIT.md) · [Delay propagation](docs/DELAY_PROPAGATION_INTELLIGENCE.md) ·
+[Recovery engine](docs/JOURNEY_RECOVERY_ENGINE.md) · [Decision model](docs/PASSENGER_DECISION_MODEL.md) ·
+[Data sources and confidence](docs/DATA_SOURCE_AND_CONFIDENCE.md) · Screenshots: `submission/screenshots/decide/`
+
+**Next round: from a set of features to one journey product.**
+
+| What's new | Where | What it does |
+| --- | --- | --- |
+| Home dashboard and My journeys | Home, My journeys | Journeys saved on this device (ids only, never the PNR), most urgent first, KPIs, recent activity, ask box, main demo |
+| Journey Recovery Graph | Journey → Overview | Every stop and change of train on a timeline; how a delay spreads, in plain sentences ("The change at New Delhi is no longer possible…") |
+| Disruption Centre | Journey → Disruption | What happened, when it was updated, what is affected, what it means, how urgent (countdown), what to do next, your rights now |
+| What-If compare | Journey → What-If | Any two outcomes side by side: arrival, extra time, money, deadline, transfer risk, rules, confidence label |
+| Rights Wallet stepper | Journey → Wallet | Estimate → Eligible → Filed → Approved → Received |
+| Journey Copilot | Copilot | Chat in English/Hindi/Hinglish, incl. "what if I wait 45 minutes?". Read-only tools, rules engine numbers, citations, tools used, next actions |
+| Knowledge base with citations | Copilot, Settings | Rule documents with source, version, effective dates and status; "no reliable source" instead of guessing |
+| Accessibility | Settings | Larger text, high contrast, simple-language mode, Hindi, skip link, keyboard and screen-reader labels |
+| Main demo | Home → "Try the main demo" | **Bhopal → New Delhi → Chandigarh** (PNR `8100000007`) |
+
+AI design: [docs/AI_ARCHITECTURE.md](docs/AI_ARCHITECTURE.md) · Data and privacy: [docs/DATA_TRUST_AND_PRIVACY.md](docs/DATA_TRUST_AND_PRIVACY.md) ·
+Strategy: [docs/NEXT_ROUND_PRODUCT_STRATEGY.md](docs/NEXT_ROUND_PRODUCT_STRATEGY.md) · Audit and plan: [docs/NEXT_ROUND_AUDIT.md](docs/NEXT_ROUND_AUDIT.md) ·
+Screenshots: `submission/screenshots/next-round/`
+
 > ⚠️ **All railway data is SIMULATED.** Trains numbered 90xxx are invented; station codes are real.
 > This is **not** an official IRCTC or Indian Railways app. A TDR is a request; the Zonal Railway decides the refund.
 
@@ -47,7 +80,7 @@ cd agla-kadam/backend
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-pytest                                  # expect: 192 passed
+pytest                                  # expect: 279 passed
 uvicorn app.main:app --reload           # API on http://localhost:8000  (docs: /docs)
 ```
 
@@ -68,8 +101,8 @@ FastAPI serves the built app at http://localhost:8000.
 
 | Suite | Command | What it covers |
 | --- | --- | --- |
-| Backend (192 tests: the original 119 + 73 new) | `cd backend && pytest` | Refund slabs and exact boundary times, rule versions by date and train category, the TDR 3-hour boundary, invalid inputs, the disruption detector, route search vs Connection Scan, ranking, the Rights Clock, LLM failures (timeout, bad JSON, invented numbers, promise wording), the API, the demo scenarios; plus the twin, transfer classes, what-if, counterfactuals, resilience, wallet stages and claims, family groups, offline card, assistant intents (EN/HI/Hinglish, stale data, LLM failure), community reports (duplicates, expiry, conflicts, personal data, no effect on recommendations) and every new endpoint |
-| End-to-end (15 tests: the original 6 + 9 new) | `cd frontend && npm run build && npx playwright install chromium && npm run test:e2e` | Full passenger journeys on a phone-sized screen, Hindi toggle, invalid PNRs, stale data; plus twin → options → what-if, wallet claim + export, family group, offline card with the network switched off, Hinglish assistant question, community reports, accessibility needs, Hindi on the new screens, announced-rule refunds never shown as certain |
+| Backend (279 tests: the original 119 + 73 upgrade + 39 next round + 48 decision engines) | `cd backend && pytest` | Refund slabs and exact boundary times, rule versions by date and train category, the TDR 3-hour boundary, invalid inputs, the disruption detector, route search vs Connection Scan, ranking, the Rights Clock, LLM failures (timeout, bad JSON, invented numbers, promise wording), the API, the demo scenarios; plus the twin, transfer classes, what-if, counterfactuals, resilience, wallet stages and claims, family groups, offline card, assistant intents (EN/HI/Hinglish, stale data, LLM failure), community reports (duplicates, expiry, conflicts, personal data, no effect on recommendations) and every new endpoint |
+| End-to-end (25 tests: the original 6 + 9 upgrade + 5 next round + 5 Decide screen) | `cd frontend && npm run build && npx playwright install chromium && npm run test:e2e` | Full passenger journeys on a phone-sized screen, Hindi toggle, invalid PNRs, stale data; plus twin → options → what-if, wallet claim + export, family group, offline card with the network switched off, Hinglish assistant question, community reports, accessibility needs, Hindi on the new screens, announced-rule refunds never shown as certain; next round: home dashboard, the Bhopal→Delhi→Chandigarh flow, Copilot What-If, Copilot prompt injection, accessibility settings |
 
 Full results: [docs/TEST_REPORT.md](docs/TEST_REPORT.md). API: [docs/API.md](docs/API.md). Architecture: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Demo, pitch and comparison: [docs/DEMO_AND_PITCH.md](docs/DEMO_AND_PITCH.md).
 
@@ -89,6 +122,10 @@ Press **Reset scenario** before each run.
 | 4 | `8100000004` | **Missed connection in fog**: NDLS→PRYJ (late 2h10m) then PRYJ→DBG, linked PNRs | Connection at Prayagraj at risk (margin −85 min). Top plan: 90205 + 90601, arriving 20:30, plus a TDR for the missed train, **₹455 if approved**, with its deadline marked *not yet officially confirmed*. Decide by **09:15** |
 
 | 5 | `8100000005` + `8100000006` | **Family group** on two PNRs (2 confirmed, 2 waitlisted after chart), NDLS→PNBE 3A ₹1,650 each | Open More → Family group. "Members have different ticket status". With "Keep family together": everyone switches to 90305, **₹4,830 back**, ₹1,770 lost, 4 new tickets; split options labelled **Splits the group** with ₹3,180 back |
+
+| 6 | `8100000007` | **Main demo — connected journey**: BPL→NDLS (90701, 3A ₹1,320) then NDLS→CDG (90801, CC ₹645), linked PNRs, 30 min minimum change | Starts 25 min late: change at New Delhi has **5 min** to spare → "Watch closely". Presenter: delay **95** → graph shows the change is not possible, leg 2 "Likely missed", Disruption Centre "Act by 09:45". Top option: **90803**, arrive 13:40, plus a TDR for the missed connection, **₹645 if approved**. Copilot: "What if I wait 45 minutes?" |
+
+| 7–12 | `8100000008` … `8100000013` | **Decision demos** (open the **Decide** tab) | 08 recovering → *Tight, stay and watch*; 09 worsening + 2 late trains ahead → *High risk, stay but prepare, don't cancel (₹0 vs TDR ₹645 if approved)*; 10 fog → wider range; 11 missed → *book 90823, file TDR*; 12 cancel ₹660 now vs ₹0 after 01:30; 13 next day 90801 + Tatkal timing |
 
 Extra edge cases to show from the presenter: **+1 h** with no new update → "Live data is out of date, so we won't advise".
 **Cancel train** → automatic full refund plus alternatives.
@@ -142,7 +179,7 @@ The minimum transfer time (30 min) is our assumption, not an official figure.
 
 See `.env.example`. Key ones: `DEMO_MODE` (presenter endpoints on/off), `LLM_ENABLED`, `LLM_PROVIDER`
 (`anthropic` or `openai`-compatible), `LLM_MODEL`, `LLM_API_KEY`, `LLM_TIMEOUT_SECONDS`, `CORS_ORIGINS`, `RATE_LIMIT_PER_MIN`,
-`STORE_PATH` (SQLite file for claims, preferences and reports; default `:memory:`, so a restart clears them).
+`WEATHER_PROVIDER` (simulated|imd|off), `BUS_PROVIDER` (demo|off), `STORE_PATH` (SQLite file for claims, preferences and reports; default `:memory:`, so a restart clears them).
 `DEMO_TOKEN` (optional; when set, the presenter page needs this token, so nobody else can change the demo on a public link).
 Never put API keys or the demo token in source code; set them in `backend/.env` (git-ignored) or the hosting dashboard.
 
@@ -166,7 +203,7 @@ Local Docker test: `docker build -t agla-kadam . && docker run -p 8000:8000 agla
 
 ## 8. Demo checklist
 
-- [ ] `pytest` green (192) · `npm run test:e2e` green (15)
+- [ ] `pytest` green (279) · `npm run test:e2e` green (25)
 - [ ] Deployed app opened on the phone over mobile data
 - [ ] One run-through with `LLM_ENABLED=false`
 - [ ] Presenter panel reset between scenarios

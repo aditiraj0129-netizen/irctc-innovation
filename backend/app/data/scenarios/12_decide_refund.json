@@ -1,0 +1,33 @@
+{
+ "id": "decide_refund",
+ "pnr": "8100000012",
+ "title": {
+  "en": "Decision demo 5: cancel now or wait? (train late before departure)",
+  "hi": "निर्णय डेमो 5: अभी रद्द करें या रुकें? (रवानगी से पहले ट्रेन लेट)"
+ },
+ "start_clock": "2026-12-26T01:00:00+05:30",
+ "linked_pnr": false,
+ "legs": [
+  {
+   "train_no": "90721",
+   "run_date": "2026-12-26",
+   "from": "BPL",
+   "to": "NDLS",
+   "class": "3A",
+   "status": "CONFIRMED",
+   "fare_paise": 132000,
+   "passengers": 1
+  }
+ ],
+ "events": [
+  {
+   "train_no": "90721",
+   "type": "DELAY",
+   "observed_at": "2026-12-26T00:55:00+05:30",
+   "delay_minutes": 150,
+   "station": "BPL"
+  }
+ ],
+ "network_events": [],
+ "weather_warnings": []
+}
