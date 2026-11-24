@@ -48,6 +48,10 @@ class CIntent(str, Enum):
     BUS = "BUS"
     NEXT_DAY = "NEXT_DAY"
     SAFEST = "SAFEST"
+    PLATFORM_ARRIVAL = "PLATFORM_ARRIVAL"
+    PLATFORM_DEPARTURE = "PLATFORM_DEPARTURE"
+    STATION_ROUTE = "STATION_ROUTE"
+    STATION_FACILITY = "STATION_FACILITY"
     UNKNOWN = "UNKNOWN"
 
 
@@ -116,6 +120,21 @@ DECISION_WORDS = [
                     "दूसरी ट्रेन", "koi aur train", "कोई और ट्रेन"]),
     ("SAFEST", ["safest", "best option", "sabse accha", "sabse surakshit", "सबसे सुरक्षित", "सबसे अच्छा", "what is the best"]),
 ]
+# Station questions (checked before the decision words so "route without stairs" is not read as a train route).
+STATION_DEP_WORDS = ["platform is my next train", "next train depart", "connecting train platform", "departing from",
+                     "kis platform se", "किस प्लेटफॉर्म से", "next train platform", "platform for my next"]
+STATION_ARR_WORDS = ["which platform will my train arrive", "arrive on", "arrival platform", "kis platform par",
+                     "किस प्लेटफॉर्म पर", "which platform"]
+FACILITY_WORDS = [("EXIT", ["exit", "way out", "nikas", "निकास", "bahar"]), ("CLOAKROOM", ["luggage", "cloakroom", "सामान", "क्लॉकरूम"]),
+                  ("TICKET_COUNTER", ["buy a ticket", "ticket counter", "ticket window", "टिकट काउंटर", "ticket kahan"]),
+                  ("WASHROOM", ["washroom", "toilet", "restroom", "शौचालय"]), ("WAITING_ROOM", ["waiting room", "प्रतीक्षालय"]),
+                  ("DRINKING_WATER", ["drinking water", "पीने का पानी"]), ("ENQUIRY", ["enquiry", "inquiry", "पूछताछ"]),
+                  ("HELP_DESK", ["help desk", "सहायता डेस्क"]), ("RPF", ["rpf", "police"]), ("FOOD", ["food stall", "khana", "खाना"]),
+                  ("METRO", ["metro", "मेट्रो"])]
+STATION_ROUTE_WORDS = ["reach platform", "get to platform", "go to platform", "route", "without stairs", "no stairs",
+                       "lift on my route", "kaise pahunch", "कैसे पहुँच", "रास्ता", "directions", "wheelchair"]
+PLAT_TO = re.compile(r"(?:reach|to|get to|go to|पर|तक)\s*(?:platform|pf|प्लेटफॉर्म)\s*(\d{1,2})")
+PLAT_FROM = re.compile(r"(?:from|on|at|से|पर हूँ)\s*(?:platform|pf|प्लेटफॉर्म)\s*(\d{1,2})|(?:platform|प्लेटफॉर्म)\s*(\d{1,2})\s*(?:से|par hu|pe hu)")
 SECOND_TRAIN_WORDS = ["second train", "next train", "connecting", "doosri train", "dusri train", "दूसरी ट्रेन"]
 
 
@@ -142,6 +161,35 @@ def redact(text: str) -> str:
     return text
 
 
+def _station_plan(t: str) -> Plan | None:
+    J = ToolCall(tool="get_journey")
+    if any(w in t for w in STATION_DEP_WORDS):
+        return Plan(intent=CIntent.PLATFORM_DEPARTURE, calls=[J, ToolCall(tool="get_platforms")])
+    if any(w in t for w in STATION_ARR_WORDS) and "platform" in t or any(w in t for w in ["किस प्लेटफॉर्म", "kis platform"]):
+        return Plan(intent=CIntent.PLATFORM_ARRIVAL, calls=[J, ToolCall(tool="get_platforms")])
+    for ftype, words in FACILITY_WORDS:
+        if any(w in t for w in words) and not any(w in t for w in ["another route", "other train"]):
+            m = PLAT_FROM.search(t)
+            args = {"type": ftype}
+            if m:
+                args["from_platform"] = int(m.group(1) or m.group(2))
+            return Plan(intent=CIntent.STATION_FACILITY, params={"type": ftype}, calls=[J, ToolCall(tool="find_facility", args=args)])
+    if any(w in t for w in STATION_ROUTE_WORDS) and not any(w in t for w in ROUTE_WORDS):
+        args: dict = {}
+        m = PLAT_TO.search(t)
+        if m:
+            args["to_platform"] = int(m.group(1))
+        m2 = PLAT_FROM.search(t)
+        if m2:
+            args["from_platform"] = int(m2.group(1) or m2.group(2))
+        if any(w in t for w in ["without stairs", "no stairs", "wheelchair", "बिना सीढ़ी", "bina seedhi", "step free",
+                                "step-free", "lift", "लिफ्ट"]):
+            args["profile"] = "step_free"
+        return Plan(intent=CIntent.STATION_ROUTE, params=args, calls=[J, ToolCall(tool="get_platforms"),
+                                                                     ToolCall(tool="station_route", args=args)])
+    return None
+
+
 def deterministic_plan(message: str, lang: str = "en") -> Plan:
     t = clean(message).lower()
     J = ToolCall(tool="get_journey")
@@ -162,6 +210,9 @@ def deterministic_plan(message: str, lang: str = "en") -> Plan:
         return Plan(intent=CIntent.WHAT_IF_DELAY, params={"minutes": mins},
                     calls=[J, ToolCall(tool="simulate_journey_options", args={"delay_increase": mins}),
                            ToolCall(tool="calculate_transfer_buffer", args={"extra_delay_minutes": mins})])
+    st_plan = _station_plan(t)
+    if st_plan is not None:
+        return st_plan
     for name, words in DECISION_WORDS:
         if any(w in f" {t} " for w in words):
             tool = {"UNRESERVED": "check_unreserved", "BUS": "find_bus", "NEXT_DAY": "next_day_options",
@@ -283,6 +334,9 @@ T = {
 from app.assistant.assistant import KIND_NAMES as KIND, STAGE_NAMES as STAGE  # noqa: E402
 from app.copilot.decide_answers import answer as decide_answer  # noqa: E402
 
+from app.copilot.station_answers import answer as station_answer  # noqa: E402
+
+STATION_INTENTS = {"PLATFORM_ARRIVAL", "PLATFORM_DEPARTURE", "STATION_ROUTE", "STATION_FACILITY"}
 DECISION_INTENTS = {"CATCH_CONNECTION", "CANCEL_MONEY", "FIND_TRAIN", "UNRESERVED", "BUS", "NEXT_DAY", "SAFEST"}
 
 CLS = {"en": {"COMFORTABLE": "comfortable", "TIGHT": "tight", "HIGH_RISK": "high risk", "NOT_FEASIBLE": "not possible"},
@@ -349,6 +403,9 @@ def compose(plan: Plan, results: dict[str, ToolResult], ctx: ToolContext) -> tup
             return L["ROUTE_NONE"], "TEMPLATES", [], []
         trains = " + ".join(alt["trains"])
         return L["ROUTE"].format(trains=trains, arr=_hhmm(o["arrival"]), money=money), "TEMPLATES", o["rule_ids"], []
+    if plan.intent.value in STATION_INTENTS:
+        text = station_answer(plan.intent.value, r, lang, plan.params)
+        return (text or T[lang]["STALE"]), "TEMPLATES", [], []
     if plan.intent.value in DECISION_INTENTS:
         text, rule_ids = decide_answer(plan.intent.value, r, lang)
         if text:
@@ -452,6 +509,8 @@ def _next_actions(intent: CIntent, jid: str, stale: bool) -> list[NextAction]:
         CIntent.CATCH_CONNECTION: ["decide", "journey"], CIntent.CANCEL_MONEY: ["decide", "wallet"],
         CIntent.FIND_TRAIN: ["decide"], CIntent.UNRESERVED: ["decide"], CIntent.BUS: ["decide"],
         CIntent.NEXT_DAY: ["decide"], CIntent.SAFEST: ["decide"],
+        CIntent.PLATFORM_ARRIVAL: ["station"], CIntent.PLATFORM_DEPARTURE: ["station"],
+        CIntent.STATION_ROUTE: ["station"], CIntent.STATION_FACILITY: ["station"],
     }[intent]
     # The family view lives under the journey's "more" page in the app.
     page = {"family": "more"}
@@ -465,7 +524,8 @@ def run_copilot(message: str, ctx: ToolContext, history: list[dict] | None = Non
     history = history or []
     warnings: list[str] = []
     low = message.lower()
-    if re.search(r"\bhindi\b", low) or any(w in low for w in ["हिंदी", "हिन्दी"]):
+    if re.search(r"\bhindi\b", low) or any(w in low for w in ["हिंदी", "हिन्दी"]) or \
+            len(re.findall(r"[\u0900-\u097F]", message)) >= 3:
         ctx.lang = "hi"
     elif "in english" in low:
         ctx.lang = "en"
@@ -491,7 +551,8 @@ def run_copilot(message: str, ctx: ToolContext, history: list[dict] | None = Non
         == SituationType.STALE_DATA
 
     text, source, rule_ids, kcites = compose(plan, results, ctx)
-    if stale and plan.intent not in (CIntent.KNOWLEDGE, CIntent.UNKNOWN):
+    if stale and plan.intent not in (CIntent.KNOWLEDGE, CIntent.UNKNOWN, CIntent.STATION_ROUTE, CIntent.STATION_FACILITY,
+                                     CIntent.PLATFORM_ARRIVAL, CIntent.PLATFORM_DEPARTURE):
         text, source = T[ctx.lang]["STALE"], "TEMPLATES"
 
     if llm is not None and not plan.clarify and text:

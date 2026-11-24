@@ -126,7 +126,8 @@ def _money(d: RuleDecision) -> dict:
 
 def build_decision(journey: Journey, events: list[Event], now: datetime, *, network_events: list[Event] | None = None,
                    weather: WeatherProvider | None = None, bus: BusProvider | None = None,
-                   profile: PassengerProfile | None = None, priority: Priority = Priority.TIME) -> DecisionView:
+                   profile: PassengerProfile | None = None, priority: Priority = Priority.TIME,
+                   station_need=None) -> DecisionView:
     now = ensure_aware(now, "now")
     st = stops()
     reg = registry()
@@ -140,7 +141,8 @@ def build_decision(journey: Journey, events: list[Event], now: datetime, *, netw
     pred = None
     if active is not None and twin.legs[idx].state not in (LegState.CANCELLED,):
         pred = predict_delay(st, active, events, network_events or [], weather, now, active.to_stn)
-    conn = connection_risk(journey, idx + 1, pred, events, now, profile) if (has_next and pred) else None
+    override = station_need(journey, idx + 1) if (station_need and has_next) else None
+    conn = connection_risk(journey, idx + 1, pred, events, now, profile, override) if (has_next and pred) else None
 
     # ---------- recovery search: from where the passenger will be ----------
     final = journey.legs[-1].to_stn

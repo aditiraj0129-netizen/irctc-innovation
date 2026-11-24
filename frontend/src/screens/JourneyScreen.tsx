@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { api, type Lang } from "../api";
+import { api, decideApi, type Lang } from "../api";
 import { GraphTimeline } from "../components/GraphTimeline";
 import { JourneyHeader } from "../components/JourneyHeader";
 import { SectionNav } from "../components/SectionNav";
@@ -12,6 +12,7 @@ import { useAssessment } from "../useAssessment";
 import { useLoad } from "../useLoad";
 
 const CALM = new Set(["ALL_CLEAR", "NOT_WATCHING_YET", "JOURNEY_OVER"]);
+const OUTLOOK_WARN = new Set<string | undefined>(["CONNECTION_AT_RISK", "CONNECTION_BROKEN", "CONNECTION_TIGHT"]);
 
 // Journey overview: the alert (what changed), the connected-journey timeline (Digital Twin + graph),
 // and the booked tickets. On desktop the timeline and the tickets sit side by side.
@@ -19,6 +20,8 @@ export function JourneyScreen({ id, lang }: { id: string; lang: Lang }) {
   const { data, error } = useAssessment(id, lang);
   const twin = useLoad(() => api.twin(id), [id], 3000);
   const rec = useLoad(() => api.recovery(id), [id], 4000);
+  // The Decide outlook also uses the delay trend and the route ahead; show it here too so screens never disagree.
+  const outlook = useLoad(() => decideApi.decision(id), [id], 8000);
   useEffect(() => { myJourneys.add(id); activity.log(id, "opened"); }, [id]);
 
   if (error && !data) return <p className="error" role="alert">{t(lang, "err_network")}</p>;
@@ -54,8 +57,10 @@ export function JourneyScreen({ id, lang }: { id: string; lang: Lang }) {
         </section>
       )}
       {calm && (
-        <section className="alert alert-green" data-testid="situation-calm">
-          <p className="alert-text">{t(lang, "s_" + sit.type)}</p>
+        <section className={`alert ${OUTLOOK_WARN.has(outlook.data?.header.status) ? "alert-amber" : "alert-green"}`} data-testid="situation-calm">
+          {OUTLOOK_WARN.has(outlook.data?.header.status)
+            ? <p className="alert-text" data-testid="outlook-warning">{t(lang, "hs_" + outlook.data!.header.status)}</p>
+            : <p className="alert-text">{t(lang, "s_" + sit.type)}</p>}
           {u?.level === "WATCH" && <p className="small"><span className="urg urg-WATCH">{t(lang, "urg_WATCH")}</span></p>}
           <div className="row-gap">
             <button className="secondary" onClick={() => go(`options/${id}`)}>{t(lang, "see_options")}</button>
@@ -104,6 +109,7 @@ export function JourneyScreen({ id, lang }: { id: string; lang: Lang }) {
           <div className="row-gap">
             <button className="secondary" onClick={() => go(`copilot/${id}`)}>💬 {t(lang, "nav_copilot")}</button>
             <button className="secondary" onClick={() => go(`whatif/${id}`)}>{t(lang, "nav_whatif")}</button>
+            <button className="secondary" data-testid="open-station" onClick={() => go(`station/${id}`)}>🚉 {t(lang, "sn_open")}</button>
           </div>
           <p className="small muted">{t(lang, "timetable_note")}</p>
         </div>

@@ -18,6 +18,10 @@ export function Presenter({ lang }: { lang: Lang }) {
   useEffect(() => { if (legs[0]) setTrain(legs[0].train_no); }, [sid, legs.length]);
 
   const [err, setErr] = useState("");
+  const [pfStation, setPfStation] = useState("NDLS");
+  const [pfKind, setPfKind] = useState("DEPARTURE");
+  const [pfNo, setPfNo] = useState(16);
+  const [pfStatus, setPfStatus] = useState("CONFIRMED");
   async function run(p: Promise<unknown>) {
     try { await p; setErr(""); } catch (e) { setErr((e as Error).message); }
     await reload();
@@ -58,6 +62,24 @@ export function Presenter({ lang }: { lang: Lang }) {
           <button className="secondary" onClick={() => run(api.event(sid, { train_no: train, type: "CHART_PREPARED", chart_status: "CONFIRMED" }))}>Chart: confirmed</button>
           <button className="secondary" onClick={() => run(api.event(sid, { train_no: train, type: "DEPARTED" }))}>Train departed</button>
           <button className="danger" onClick={() => run(api.event(sid, { train_no: train, type: "CANCELLED" }))}>Cancel train</button>
+        </div>
+      </section>
+
+      <section className="card stack" aria-label="Simulated platform event">
+        <p className="label">Simulated platform event (train above)</p>
+        <div className="row-gap">
+          <input aria-label="Station code" value={pfStation} maxLength={5} style={{ width: "6em" }}
+            onChange={(e) => setPfStation(e.target.value.toUpperCase().replace(/[^A-Z]/g, ""))} data-testid="presenter-pf-station" />
+          <select aria-label="Arrival or departure" value={pfKind} onChange={(e) => setPfKind(e.target.value)}>
+            <option value="ARRIVAL">Arrival</option><option value="DEPARTURE">Departure</option>
+          </select>
+          <input aria-label="Platform" type="number" min={1} max={30} value={pfNo} style={{ width: "5em" }}
+            onChange={(e) => setPfNo(+e.target.value)} data-testid="presenter-pf-no" />
+          <select aria-label="Status" value={pfStatus} onChange={(e) => setPfStatus(e.target.value)}>
+            <option value="CONFIRMED">Confirmed</option><option value="REPORTED">Reported</option>
+          </select>
+          <button className="secondary" data-testid="presenter-pf-send"
+            onClick={() => run(api.platform(sid, { train_no: train, station: pfStation, kind: pfKind, platform: pfNo, status: pfStatus }))}>Send platform</button>
         </div>
       </section>
 

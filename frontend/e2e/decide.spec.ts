@@ -65,3 +65,13 @@ test("25. decide in Hindi, and the journey alert leads to it", async ({ page, re
   await expect(page.getByText("अब आप क्या कर सकते हैं?")).toBeVisible();
   await request.post("/api/demo/bhopal_delhi_chandigarh/reset");
 });
+
+test("31. screens agree: Journey and Disruption show the Decide outlook; What-If marks repeated results", async ({ page }) => {
+  await page.goto("/#/journey/decide_worsening");
+  await expect(page.getByTestId("outlook-warning")).toContainText("Your connecting journey is at risk.");
+  await page.goto("/#/disruption/decide_worsening");
+  await expect(page.getByTestId("dc-outlook")).toContainText("Your connecting journey is at risk.");
+  await page.goto("/#/whatif/decide_worsening");
+  await expect(page.getByTestId("wi-WAIT_30").getByTestId("wi-same")).toBeVisible();
+  await expect(page.getByTestId("wi-BEST_NOW").getByTestId("wi-same")).toHaveCount(0);
+});

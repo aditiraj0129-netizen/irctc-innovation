@@ -61,6 +61,9 @@ class Scenario:
         self.network_events = [Event(**{**e, "source": EventSource.SIMULATED}) for e in raw.get("network_events", [])]
         # Demo-only simulated fog warnings (never real IMD data).
         self.weather_warnings: list[dict] = list(raw.get("weather_warnings", []))
+        # Simulated platform observations (status CONFIRMED / REPORTED), labelled by source.
+        from app.station.platforms import PlatformObservation
+        self.platform_events = [PlatformObservation(**p) for p in raw.get("platform_events", [])]
 
 
 def load_scenarios() -> dict[str, Scenario]:

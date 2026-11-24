@@ -1,0 +1,54 @@
+# New Delhi (NDLS) — SCHEMATIC station model for Agla Kadam. NOT an official map, NOT to scale.
+# Verified public facts (see sources): 16 platforms; Platform 1 on the Paharganj side; Platform 16 on the
+# Ajmeri Gate side; two foot overbridges (FOBs) reported between Paharganj and Ajmeri Gate; Delhi Metro
+# connection on the Ajmeri Gate side (reported).
+# EVERYTHING ELSE (platform pairing, FOB positions, lift/escalator positions, distances, facility positions)
+# is ILLUSTRATIVE so the routing method can be demonstrated. Replace with surveyed data before real use.
+code: NDLS
+name: {en: New Delhi, hi: नई दिल्ली}
+kind: THROUGH                      # trains run through; platforms joined by overbridges
+map_kind: SCHEMATIC
+platform_count: {value: 16, verification: VERIFIED_PUBLIC, source: S1}
+platform_length_m: 560
+group_spacing_m: 30
+platform_groups:                   # which platform numbers share one physical platform (ILLUSTRATIVE pairing)
+  verification: ILLUSTRATIVE
+  groups: [[1], [2, 3], [4, 5], [6, 7], [8, 9], [10, 11], [12, 13], [14, 15], [16]]
+fobs:
+  - {id: FOB_N, name: {en: North foot overbridge, hi: उत्तरी फुट ओवरब्रिज}, x_m: 170, verification: REPORTED, source: S2,
+     lifts_at: [0, 2, 4, 6, 8], escalators_at: [0, 8], position_verification: ILLUSTRATIVE}
+  - {id: FOB_S, name: {en: South foot overbridge, hi: दक्षिणी फुट ओवरब्रिज}, x_m: 400, verification: REPORTED, source: S2,
+     lifts_at: [0, 8], escalators_at: [], position_verification: ILLUSTRATIVE}
+sides:
+  - {id: PAHARGANJ, group: 0, name: {en: Paharganj side entrance/exit, hi: पहाड़गंज साइड प्रवेश/निकास}, x_m: 280,
+     verification: VERIFIED_PUBLIC, source: S1, fob_link: FOB_N}
+  - {id: AJMERI, group: 8, name: {en: Ajmeri Gate side entrance/exit, hi: अजमेरी गेट साइड प्रवेश/निकास}, x_m: 280,
+     verification: VERIFIED_PUBLIC, source: S1, fob_link: FOB_N}
+facilities:
+  - {id: METRO_AJMERI, type: METRO, name: {en: Delhi Metro connection (Ajmeri Gate side), hi: दिल्ली मेट्रो (अजमेरी गेट साइड)}, side: AJMERI, verification: REPORTED, source: S3}
+  - {id: RES_PHG, type: TICKET_COUNTER, name: {en: Reservation / ticket counter (Paharganj side), hi: आरक्षण / टिकट काउंटर (पहाड़गंज साइड)}, side: PAHARGANJ, verification: ILLUSTRATIVE}
+  - {id: UTS_AJM, type: TICKET_COUNTER, name: {en: Unreserved ticket counter (Ajmeri Gate side), hi: अनारक्षित टिकट काउंटर (अजमेरी गेट साइड)}, side: AJMERI, verification: ILLUSTRATIVE}
+  - {id: ATVM_PHG, type: ATVM, name: {en: Ticket vending machines (Paharganj side), hi: टिकट वेंडिंग मशीन (पहाड़गंज साइड)}, side: PAHARGANJ, verification: ILLUSTRATIVE}
+  - {id: ATVM_AJM, type: ATVM, name: {en: Ticket vending machines (Ajmeri Gate side), hi: टिकट वेंडिंग मशीन (अजमेरी गेट साइड)}, side: AJMERI, verification: ILLUSTRATIVE}
+  - {id: ENQ_PHG, type: ENQUIRY, name: {en: Enquiry counter (Paharganj side), hi: पूछताछ काउंटर (पहाड़गंज साइड)}, side: PAHARGANJ, verification: ILLUSTRATIVE}
+  - {id: ENQ_AJM, type: ENQUIRY, name: {en: Enquiry counter (Ajmeri Gate side), hi: पूछताछ काउंटर (अजमेरी गेट साइड)}, side: AJMERI, verification: ILLUSTRATIVE}
+  - {id: WAIT_PF1, type: WAITING_ROOM, name: {en: Waiting room (Platform 1), hi: प्रतीक्षालय (प्लेटफॉर्म 1)}, group: 0, x_m: 330, verification: ILLUSTRATIVE}
+  - {id: WAIT_PF16, type: WAITING_ROOM, name: {en: Waiting room (Platform 16), hi: प्रतीक्षालय (प्लेटफॉर्म 16)}, group: 8, x_m: 330, verification: ILLUSTRATIVE}
+  - {id: RETIRING, type: RETIRING_ROOM, name: {en: Retiring rooms (Paharganj side), hi: विश्राम कक्ष (पहाड़गंज साइड)}, side: PAHARGANJ, verification: ILLUSTRATIVE}
+  - {id: WC_PF1, type: WASHROOM, name: {en: Washroom (Platform 1), hi: शौचालय (प्लेटफॉर्म 1)}, group: 0, x_m: 230, verification: ILLUSTRATIVE}
+  - {id: WC_PF8, type: WASHROOM, name: {en: Washroom (Platforms 8–9), hi: शौचालय (प्लेटफॉर्म 8–9)}, group: 4, x_m: 230, verification: ILLUSTRATIVE}
+  - {id: WC_PF16, type: WASHROOM, name: {en: Washroom (Platform 16), hi: शौचालय (प्लेटफॉर्म 16)}, group: 8, x_m: 230, verification: ILLUSTRATIVE}
+  - {id: WATER_PF4, type: DRINKING_WATER, name: {en: Drinking water (Platforms 4–5), hi: पीने का पानी (प्लेटफॉर्म 4–5)}, group: 2, x_m: 280, verification: ILLUSTRATIVE}
+  - {id: WATER_PF12, type: DRINKING_WATER, name: {en: Drinking water (Platforms 12–13), hi: पीने का पानी (प्लेटफॉर्म 12–13)}, group: 6, x_m: 280, verification: ILLUSTRATIVE}
+  - {id: FOOD_PF1, type: FOOD, name: {en: Food stall (Platform 1), hi: खाने का स्टॉल (प्लेटफॉर्म 1)}, group: 0, x_m: 380, verification: ILLUSTRATIVE}
+  - {id: FOOD_PF6, type: FOOD, name: {en: Food stall (Platforms 6–7), hi: खाने का स्टॉल (प्लेटफॉर्म 6–7)}, group: 3, x_m: 300, verification: ILLUSTRATIVE}
+  - {id: CLOAK_PHG, type: CLOAKROOM, name: {en: Cloakroom / luggage room (Paharganj side), hi: क्लॉकरूम / सामान घर (पहाड़गंज साइड)}, side: PAHARGANJ, verification: ILLUSTRATIVE}
+  - {id: HELP_PF1, type: HELP_DESK, name: {en: Help desk (Platform 1), hi: सहायता डेस्क (प्लेटफॉर्म 1)}, group: 0, x_m: 300, verification: ILLUSTRATIVE}
+  - {id: RPF_PF1, type: RPF, name: {en: RPF help point (Platform 1), hi: RPF सहायता (प्लेटफॉर्म 1)}, group: 0, x_m: 260, verification: ILLUSTRATIVE}
+  - {id: RPF_PF16, type: RPF, name: {en: RPF help point (Platform 16), hi: RPF सहायता (प्लेटफॉर्म 16)}, group: 8, x_m: 260, verification: ILLUSTRATIVE}
+  - {id: PARK_PHG, type: PARKING, name: {en: Parking / pickup (Paharganj side), hi: पार्किंग / पिकअप (पहाड़गंज साइड)}, side: PAHARGANJ, verification: ILLUSTRATIVE}
+  - {id: PARK_AJM, type: PARKING, name: {en: Parking / pickup (Ajmeri Gate side), hi: पार्किंग / पिकअप (अजमेरी गेट साइड)}, side: AJMERI, verification: ILLUSTRATIVE}
+sources:
+  S1: {title: "Wikipedia — New Delhi railway station (16 platforms; Platform 1 Paharganj side, Platform 16 Ajmeri Gate side)", url: "https://en.wikipedia.org/wiki/New_Delhi_railway_station", checked: 2026-11-24}
+  S2: {title: "Governance Now (2010) — waiting area planned over the two foot overbridges connecting Ajmeri Gate and Paharganj", url: "https://www.governancenow.com/news/regular-story/soon-new-waiting-facility-new-delhi-station", checked: 2026-11-24}
+  S3: {title: "Wikipedia — Delhi Metro connectivity integrated (New Delhi metro station on the Ajmeri Gate side)", url: "https://en.wikipedia.org/wiki/New_Delhi_railway_station", checked: 2026-11-24}

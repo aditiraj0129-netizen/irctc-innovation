@@ -3,6 +3,7 @@ import { en2, hi2 } from "./i18n_more";
 import { en3, hi3 } from "./i18n_v2";
 import { en4, hi4 } from "./i18n_v3";
 import { en5, hi5 } from "./i18n_v4";
+import { en6, hi6 } from "./i18n_v5";
 
 type Dict = Record<string, string>;
 
@@ -244,8 +245,8 @@ const steps: Record<Lang, Record<string, string[]>> = {
   },
 };
 
-Object.assign(en, en2, en3, en4, en5);
-Object.assign(hi, hi2, hi3, hi4, hi5);
+Object.assign(en, en2, en3, en4, en5, en6);
+Object.assign(hi, hi2, hi3, hi4, hi5, hi6);
 
 /** Translate a backend code with a prefix; unknown codes become readable text instead of raw keys. */
 export function tc(lang: Lang, prefix: string, code: string, vars: Record<string, string> = {}): string {

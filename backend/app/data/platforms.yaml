@@ -1,0 +1,16 @@
+# SIMULATED platform data for the demo trains (90xxx are invented trains). NOT official.
+# scheduled: the platform a timetable would normally assign (status SCHEDULED).
+# history:   platforms used on recent runs, for the documented PREDICTED rule (>= 5 of the last 7 runs agree).
+label: "Simulated platform data (not official)"
+scheduled:
+  - {train: "90701", station: NDLS, kind: ARRIVAL, platform: 5}
+  - {train: "90801", station: NDLS, kind: DEPARTURE, platform: 1}
+  - {train: "90721", station: NDLS, kind: ARRIVAL, platform: 4}
+  - {train: "90821", station: NDLS, kind: DEPARTURE, platform: 12}
+  - {train: "90803", station: NDLS, kind: DEPARTURE, platform: 2}
+  - {train: "90805", station: NDLS, kind: DEPARTURE, platform: 3}
+  - {train: "90807", station: NDLS, kind: DEPARTURE, platform: 6}
+  - {train: "90823", station: NDLS, kind: DEPARTURE, platform: 14}
+history:
+  - {train: "90825", station: NDLS, kind: DEPARTURE, last_runs: [15, 15, 14, 15, 15, 15, 15]}
+  - {train: "90101", station: NDLS, kind: DEPARTURE, last_runs: [8, 9, 10, 8, 11, 9, 7]}

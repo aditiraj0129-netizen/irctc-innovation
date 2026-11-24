@@ -193,6 +193,7 @@ export const api = {
   clock: (id: string, advance_minutes: number) =>
     req(`/api/demo/${id}/clock`, { method: "POST", body: JSON.stringify({ advance_minutes }) }),
   event: (id: string, body: object) => req(`/api/demo/${id}/events`, { method: "POST", body: JSON.stringify(body) }),
+  platform: (id: string, body: object) => req(`/api/demo/${id}/platform`, { method: "POST", body: JSON.stringify(body) }),
   twin: (id: string) => req<Twin>(`/api/journeys/${id}/twin`),
   whatif: (id: string, priority: Priority, delay_increase: number, wait_minutes: number) =>
     req<WhatIf>(`/api/journeys/${id}/whatif?priority=${priority}&delay_increase=${delay_increase}&wait_minutes=${wait_minutes}`),
@@ -240,4 +241,47 @@ export interface DecisionView {
 }
 export const decideApi = {
   decision: (id: string, priority: Priority = "time") => req<DecisionView>(`/api/v1/journeys/${id}/decision?priority=${priority}`),
+};
+
+// ---------- Station Intelligence ----------
+export type Lbl = { en: string; hi: string };
+export interface SNode { id: string; kind: "PLATFORM" | "PLATFORM_POINT" | "FOB" | "CONCOURSE" | "SIDE" | "FACILITY"; label: Lbl;
+  x: number; y: number; level: number; group: number | null; platform: number | null; facility_type: string | null;
+  verification: string; source: string | null }
+export interface SEdge { a: string; b: string; kind: string; distance_m: number; level_change: number; step_free: boolean;
+  status: string; verification: string }
+export interface StationSummary { code: string; name: Lbl; kind: string; map_kind: string; platforms: number[];
+  platform_count: Record<string, any>; notes: string }
+export interface StationMap extends StationSummary { groups: number[][]; nodes: SNode[]; edges: SEdge[]; facilities: string[];
+  sources: Record<string, { title: string; url: string; checked: string }> }
+export interface RouteStep { code: string; params: Record<string, any> }
+export interface SRoute { station: string; profile: string; walking_speed: string; found: boolean; reason: string | null;
+  start: string; end: string; start_label: Lbl | null; end_label: Lbl | null; path: string[]; distance_m: number;
+  minutes_low: number; minutes_high: number; stairs: number; lifts: number; escalators: number; level_changes: number;
+  steps: RouteStep[]; verification: string; confidence: string; warnings: string[] }
+export interface PlatformInfo { train_no: string; station: string; kind: string; platform: number | null; status: string;
+  source: string; observed_at: string | null; age_minutes: number | null; stale: boolean; changed_from: number | null;
+  trusted: boolean; message: string | null; history: { platform: number | null; status: string; at: string | null; source: string }[] }
+export interface StationConnection { station: string; station_name: Lbl | null; has_map: boolean; first_train: string;
+  first_train_name: string; second_train: string; second_train_name: string; arrival_platform: PlatformInfo;
+  departure_platform: PlatformInfo; arrival_early: string | null; arrival_expected: string | null; arrival_late: string | null;
+  scheduled_arrival: string; departure: string; departure_delay_minutes: number; buffer_minutes: number; route: SRoute | null;
+  profile: string; available_minutes: Record<string, number> | null; required_minutes: Record<string, number> | null;
+  margin_minutes: Record<string, number> | null; result: string; capped_by: string[]; missing: string[];
+  reasons: Record<string, any>[]; prepare_to_alight: boolean; minutes_to_arrival: number | null; data_fresh: boolean;
+  location: string | null; location_source: string; guarantee: boolean }
+export interface JourneyStation { journey: Assessment["journey"]; now: string; station: string; station_summary: StationSummary | null;
+  connection: StationConnection | null; arrival_platform: PlatformInfo; decision_header: Record<string, any>;
+  prediction: Record<string, any>; live_platform_source: string }
+export const stationApi = {
+  list: () => req<{ stations: StationSummary[] }>(`/api/v1/stations`),
+  get: (code: string) => req<StationMap>(`/api/v1/stations/${code}`),
+  facilities: (code: string, q: string, type?: string) =>
+    req<{ results: SNode[]; count: number }>(`/api/v1/stations/${code}/facilities?q=${encodeURIComponent(q)}${type ? `&type=${type}` : ""}`),
+  route: (code: string, from: string, to: string, profile: string, speed = "normal") =>
+    req<{ route: SRoute; alternatives: SRoute[] }>(`/api/v1/stations/${code}/route?from=${from}&to=${to}&profile=${profile}&speed=${speed}`),
+  journey: (id: string, at: string | null, profile: string | null, atSource = "MANUAL") =>
+    req<JourneyStation>(`/api/v1/journeys/${id}/station?${at ? `at=${at}&at_source=${atSource}&` : ""}${profile ? `profile=${profile}` : ""}`),
+  enterPlatform: (id: string, train_no: string, kind: "ARRIVAL" | "DEPARTURE", platform: number) =>
+    req(`/api/v1/journeys/${id}/station/platform`, { method: "POST", body: JSON.stringify({ train_no, kind, platform }) }),
 };

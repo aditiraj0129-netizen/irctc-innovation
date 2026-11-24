@@ -1,4 +1,4 @@
-import { api, type Lang } from "../api";
+import { api, decideApi, type Lang } from "../api";
 import { JourneyHeader } from "../components/JourneyHeader";
 import { SectionNav } from "../components/SectionNav";
 import { dayTime, duration, rupees, time } from "../format";
@@ -11,6 +11,7 @@ import { useLoad } from "../useLoad";
 // recovery view (graph + rules engine + planner). Nothing here is calculated by AI.
 export function DisruptionScreen({ id, lang }: { id: string; lang: Lang }) {
   const { data, error } = useLoad(() => api.recovery(id), [id], 4000);
+  const outlook = useLoad(() => decideApi.decision(id), [id], 8000);
   if (error && !data) return <p className="error" role="alert">{t(lang, "err_network")}</p>;
   if (!data) return <p className="muted" aria-busy="true">…</p>;
   const j = data.journey;
@@ -31,6 +32,10 @@ export function DisruptionScreen({ id, lang }: { id: string; lang: Lang }) {
         {u.minutes_left != null && <p className="countdown" data-testid="dc-countdown">{duration(Math.max(0, u.minutes_left), lang)}</p>}
         {u.decide_by && <p><strong>{t(lang, "decide_by_t", { t: dayTime(u.decide_by) })}</strong></p>}
         {!data.data_fresh && <p data-testid="dc-stale">{t(lang, "stale_msg")}</p>}
+        {outlook.data && ["CONNECTION_AT_RISK", "CONNECTION_BROKEN", "CONNECTION_TIGHT"].includes(outlook.data.header.status) && (
+          <p className="small" data-testid="dc-outlook"><strong>{t(lang, "hs_" + outlook.data.header.status)}</strong>{" "}
+            <button className="link" onClick={() => go(`decide/${id}`)}>{t(lang, "dz_open")} →</button></p>
+        )}
       </section>
 
       <div className="grid-2">

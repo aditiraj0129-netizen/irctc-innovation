@@ -39,6 +39,8 @@ class ToolContext:
     cache: dict = field(default_factory=dict)            # per-request memo so tools don't recompute
     # Bound by the server: builds the decision view (prediction, connection, recovery, money) for this journey.
     decide: Callable[[Priority], Any] | None = None
+    # Bound by the server: the journey's station view (platforms with confidence, station map, connection walk).
+    station: Callable[[], dict] | None = None
 
 
 class NoArgs(BaseModel):
@@ -235,6 +237,83 @@ def next_day_options(ctx: ToolContext, a: NoArgs) -> dict:
     return {"options": [_opt(o) for o in r.next_day], "rules": r.rules["tatkal"]}
 
 
+# ---------- Station Intelligence tools (read-only) ----------
+
+from enum import Enum as _Enum  # noqa: E402
+
+from app.station.route import Profile as RouteProfile, RouteError, route as station_route_fn  # noqa: E402
+from app.station.service import FACILITY_TYPES, nearest_facility, start_node  # noqa: E402
+
+FacilityType = _Enum("FacilityType", {t: t for t in FACILITY_TYPES}, type=str)
+
+
+class StationRouteArgs(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    from_platform: int | None = Field(default=None, ge=1, le=30)
+    to_platform: int | None = Field(default=None, ge=1, le=30)
+    profile: RouteProfile = RouteProfile.FASTEST
+
+
+class FacilityArgs(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    type: FacilityType
+    from_platform: int | None = Field(default=None, ge=1, le=30)
+
+
+def _station_view(ctx: ToolContext) -> dict:
+    if "station" not in ctx.cache:
+        if ctx.station is None:
+            raise ValueError("STATION_VIEW_NOT_BOUND")
+        ctx.cache["station"] = ctx.station()
+    return ctx.cache["station"]
+
+
+def get_platforms(ctx: ToolContext, a: NoArgs) -> dict:
+    v = _station_view(ctx)
+    c = v["connection"]
+    return {"station": v["station"], "has_map": v["station_obj"] is not None,
+            "arrival": v["arrival"].model_dump(mode="json") if v["arrival"] else None,
+            "departure": v["departure"].model_dump(mode="json") if v["departure"] else None,
+            "first_train": v["first_train"], "second_train": v["second_train"],
+            "connection": {k: getattr(c, k) for k in ("result", "margin_minutes", "capped_by", "missing")} if c else None}
+
+
+def station_route_tool(ctx: ToolContext, a: StationRouteArgs) -> dict:
+    v = _station_view(ctx)
+    st = v["station_obj"]
+    if st is None:
+        return {"found": False, "reason": "NO_STATION_MAP", "station": v["station"]}
+    start = start_node(v, a.from_platform)
+    if start is None:
+        return {"found": False, "reason": "LOCATION_UNKNOWN", "station": v["station"]}
+    to = a.to_platform or (v["departure"].platform if v["departure"] else None)
+    if to is None:
+        return {"found": False, "reason": "DESTINATION_PLATFORM_UNKNOWN", "station": v["station"]}
+    if f"PF{to}" not in st.nodes:
+        return {"found": False, "reason": "INVALID_PLATFORM", "station": v["station"]}
+    try:
+        r = station_route_fn(st, start, f"PF{to}", a.profile)
+    except RouteError as e:
+        return {"found": False, "reason": str(e), "station": v["station"]}
+    return {"station": v["station"], "to_platform": to, "dest_status": (v["departure"].status.value
+            if v["departure"] and v["departure"].platform == to else "ASKED_BY_YOU"),
+            "route": r.model_dump(mode="json")}
+
+
+def find_facility_tool(ctx: ToolContext, a: FacilityArgs) -> dict:
+    v = _station_view(ctx)
+    if v["station_obj"] is None:
+        return {"found": False, "reason": "NO_STATION_MAP", "station": v["station"]}
+    start = start_node(v, a.from_platform)
+    if start is None:
+        return {"found": False, "reason": "LOCATION_UNKNOWN", "station": v["station"]}
+    r, targets = nearest_facility(v["station"], start, a.type.value)
+    if r is None:
+        return {"found": False, "reason": "NOT_MAPPED" if not targets else "NO_ROUTE", "station": v["station"]}
+    n = v["station_obj"].nodes[r.end]
+    return {"found": True, "station": v["station"], "facility": n.model_dump(), "route": r.model_dump(mode="json")}
+
+
 @dataclass(frozen=True)
 class ToolSpec:
     name: str
@@ -270,6 +349,12 @@ TOOLS: dict[str, ToolSpec] = {t.name: t for t in [
     ToolSpec("check_unreserved", "Trains with General coaches and the unreserved-ticket rules.", NoArgs, check_unreserved),
     ToolSpec("find_bus", "Bus options (demo samples only; none when no provider is connected).", NoArgs, find_bus),
     ToolSpec("next_day_options", "Next-day trains with Tatkal opening time (never guaranteed).", NoArgs, next_day_options),
+    ToolSpec("get_platforms", "Arrival and departure platforms with confidence (confirmed/reported/scheduled/predicted/unknown).",
+             NoArgs, get_platforms),
+    ToolSpec("station_route", "Walking route between platforms on the schematic station map (time range, stairs, lifts).",
+             StationRouteArgs, station_route_tool),
+    ToolSpec("find_facility", "Nearest mapped facility of a type (exit, ticket counter, washroom, cloakroom...).",
+             FacilityArgs, find_facility_tool),
 ]}
 
 

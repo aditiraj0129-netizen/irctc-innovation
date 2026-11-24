@@ -1,0 +1,82 @@
+{
+ "id": "station_connection",
+ "pnr": "8100000014",
+ "title": {
+  "en": "Station Navigator demo: change trains at New Delhi (Platform 4 → 12)",
+  "hi": "स्टेशन नेविगेटर डेमो: नई दिल्ली में ट्रेन बदलें (प्लेटफॉर्म 4 → 12)"
+ },
+ "start_clock": "2026-12-29T18:30:00+05:30",
+ "linked_pnr": true,
+ "min_transfer_minutes": 20,
+ "legs": [
+  {
+   "train_no": "90721",
+   "run_date": "2026-12-29",
+   "from": "BPL",
+   "to": "NDLS",
+   "class": "3A",
+   "status": "CONFIRMED",
+   "fare_paise": 132000,
+   "passengers": 1
+  },
+  {
+   "train_no": "90821",
+   "run_date": "2026-12-29",
+   "from": "NDLS",
+   "to": "CDG",
+   "class": "CC",
+   "status": "CONFIRMED",
+   "fare_paise": 64500,
+   "passengers": 1
+  }
+ ],
+ "events": [
+  {
+   "train_no": "90721",
+   "type": "DEPARTED",
+   "observed_at": "2026-12-29T09:31:00+05:30",
+   "station": "BPL"
+  },
+  {
+   "train_no": "90721",
+   "type": "DELAY",
+   "delay_minutes": 30,
+   "observed_at": "2026-12-29T15:40:00+05:30",
+   "station": "AGC"
+  },
+  {
+   "train_no": "90721",
+   "type": "DELAY",
+   "delay_minutes": 28,
+   "observed_at": "2026-12-29T17:30:00+05:30"
+  },
+  {
+   "train_no": "90721",
+   "type": "DELAY",
+   "delay_minutes": 28,
+   "observed_at": "2026-12-29T18:28:00+05:30"
+  }
+ ],
+ "network_events": [],
+ "weather_warnings": [],
+ "platform_events": [
+  {
+   "train_no": "90721",
+   "station": "NDLS",
+   "kind": "ARRIVAL",
+   "platform": 4,
+   "status": "REPORTED",
+   "observed_at": "2026-12-29T18:10:00+05:30",
+   "source": "SIMULATED_DEMO (stands in for a station display board)"
+  },
+  {
+   "train_no": "90821",
+   "station": "NDLS",
+   "kind": "DEPARTURE",
+   "platform": 12,
+   "status": "CONFIRMED",
+   "observed_at": "2026-12-29T18:15:00+05:30",
+   "source": "SIMULATED_DEMO (stands in for an official source)"
+  }
+ ]
+}

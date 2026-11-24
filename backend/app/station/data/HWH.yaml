@@ -1,0 +1,45 @@
+# Howrah Junction (HWH) — SCHEMATIC station model. NOT an official map, NOT to scale.
+# Verified public facts: Old Complex with platforms 1–15, New Complex with platforms 17–23 (Platform 16 reported
+# non-functional/under construction); terminus station; Howrah Metro station is part of the station area (reported).
+# Platform pairing, concourse geometry, the link between complexes, lifts and facility positions are ILLUSTRATIVE.
+code: HWH
+name: {en: Howrah Junction, hi: हावड़ा जंक्शन}
+kind: TERMINUS                     # bay platforms ending at a head concourse
+map_kind: SCHEMATIC
+platform_count: {value: 22, verification: VERIFIED_PUBLIC, source: S1, note: "1–15 and 17–23 in use; 16 reported non-functional"}
+platform_length_m: 600
+group_spacing_m: 28
+platform_groups:
+  verification: ILLUSTRATIVE
+  groups: [[1, 2], [3, 4], [5, 6], [7, 8], [9, 10], [11, 12], [13, 14], [15], [17, 18], [19, 20], [21, 22], [23]]
+complexes:
+  - {id: OLD, name: {en: Old Complex (Platforms 1–15), hi: पुराना परिसर (प्लेटफॉर्म 1–15)}, groups: [0, 1, 2, 3, 4, 5, 6, 7], verification: VERIFIED_PUBLIC, source: S1}
+  - {id: NEW, name: {en: New Complex (Platforms 17–23), hi: नया परिसर (प्लेटफॉर्म 17–23)}, groups: [8, 9, 10, 11], verification: VERIFIED_PUBLIC, source: S1, gap_m: 120}
+complex_links:
+  - {a: OLD, b: NEW, kind: WALK, distance_m: 260, name: {en: walkway between the Old and New Complex, hi: पुराने और नए परिसर के बीच का रास्ता}, verification: ILLUSTRATIVE}
+fobs:
+  - {id: FOB_OLD, name: {en: Old Complex foot overbridge, hi: पुराने परिसर का फुट ओवरब्रिज}, x_m: 300, groups: [0, 7], verification: ILLUSTRATIVE,
+     lifts_at: [0, 7], escalators_at: [], position_verification: ILLUSTRATIVE}
+sides:
+  - {id: OLD_MAIN, complex: OLD, name: {en: Old Complex main entrance/exit, hi: पुराने परिसर का मुख्य प्रवेश/निकास}, verification: REPORTED, source: S2}
+  - {id: NEW_MAIN, complex: NEW, name: {en: New Complex entrance/exit, hi: नए परिसर का प्रवेश/निकास}, verification: ILLUSTRATIVE}
+facilities:
+  - {id: METRO, type: METRO, name: {en: Howrah Metro station, hi: हावड़ा मेट्रो स्टेशन}, side: OLD_MAIN, verification: REPORTED, source: S2}
+  - {id: TKT_OLD, type: TICKET_COUNTER, name: {en: Ticket counters (Old Complex), hi: टिकट काउंटर (पुराना परिसर)}, side: OLD_MAIN, verification: ILLUSTRATIVE}
+  - {id: TKT_NEW, type: TICKET_COUNTER, name: {en: Ticket counters (New Complex), hi: टिकट काउंटर (नया परिसर)}, side: NEW_MAIN, verification: ILLUSTRATIVE}
+  - {id: ATVM_OLD, type: ATVM, name: {en: Ticket vending machines (Old Complex concourse), hi: टिकट वेंडिंग मशीन (पुराना परिसर)}, concourse_group: 3, verification: ILLUSTRATIVE}
+  - {id: ENQ_OLD, type: ENQUIRY, name: {en: Enquiry counter (Old Complex), hi: पूछताछ काउंटर (पुराना परिसर)}, concourse_group: 2, verification: ILLUSTRATIVE}
+  - {id: WAIT_OLD, type: WAITING_ROOM, name: {en: Waiting hall (Old Complex), hi: प्रतीक्षालय (पुराना परिसर)}, concourse_group: 5, verification: ILLUSTRATIVE}
+  - {id: WAIT_NEW, type: WAITING_ROOM, name: {en: Waiting hall (New Complex), hi: प्रतीक्षालय (नया परिसर)}, concourse_group: 9, verification: ILLUSTRATIVE}
+  - {id: YATRI_NIWAS, type: RETIRING_ROOM, name: {en: Yatri Niwas (transit accommodation), hi: यात्री निवास}, side: NEW_MAIN, verification: REPORTED, source: S1}
+  - {id: WC_OLD, type: WASHROOM, name: {en: Washroom (Old Complex concourse), hi: शौचालय (पुराना परिसर)}, concourse_group: 1, verification: ILLUSTRATIVE}
+  - {id: WC_NEW, type: WASHROOM, name: {en: Washroom (New Complex concourse), hi: शौचालय (नया परिसर)}, concourse_group: 10, verification: ILLUSTRATIVE}
+  - {id: WATER_OLD, type: DRINKING_WATER, name: {en: Drinking water (Old Complex concourse), hi: पीने का पानी (पुराना परिसर)}, concourse_group: 4, verification: ILLUSTRATIVE}
+  - {id: FOOD_COURT, type: FOOD, name: {en: Food court (between the complexes), hi: फूड कोर्ट (दोनों परिसरों के बीच)}, concourse_group: 7, verification: ILLUSTRATIVE}
+  - {id: CLOAK_OLD, type: CLOAKROOM, name: {en: Cloakroom (Old Complex), hi: क्लॉकरूम (पुराना परिसर)}, concourse_group: 0, verification: ILLUSTRATIVE}
+  - {id: HELP_OLD, type: HELP_DESK, name: {en: Help desk (Old Complex), hi: सहायता डेस्क (पुराना परिसर)}, concourse_group: 3, verification: ILLUSTRATIVE}
+  - {id: RPF_OLD, type: RPF, name: {en: RPF help point (Old Complex), hi: RPF सहायता (पुराना परिसर)}, concourse_group: 6, verification: ILLUSTRATIVE}
+  - {id: PARK_OLD, type: PARKING, name: {en: Taxi / pickup (Old Complex), hi: टैक्सी / पिकअप (पुराना परिसर)}, side: OLD_MAIN, verification: ILLUSTRATIVE}
+sources:
+  S1: {title: "Wikipedia — Howrah railway station (Old Complex platforms 1–15, New Complex 17–23; Yatri Niwas built with the expansion)", url: "https://en.wikipedia.org/wiki/Howrah_railway_station", checked: 2026-11-24}
+  S2: {title: "Wikivoyage — Howrah Station (three parts: Old Complex, New Complex, Howrah Metro)", url: "https://en.wikivoyage.org/wiki/Howrah_Station", checked: 2026-11-24}

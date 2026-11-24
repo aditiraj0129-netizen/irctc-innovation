@@ -1,5 +1,34 @@
 # Test report
 
+## Station Intelligence + product audit (24 Nov 2026)
+
+| Suite | Count | Result |
+| --- | --- | --- |
+| Backend (pytest) | **314** = 279 before + 35 new (`tests/test_station_intelligence.py`) | **314 passed, 0 failed, 0 skipped** |
+| End-to-end (Playwright, phone size, 1 worker) | **31** = 25 before + 6 new (`e2e/station.spec.ts` 26–30, `e2e/decide.spec.ts` 31) | **31 passed** |
+| TypeScript check / production build | — | pass / pass |
+
+No existing test was changed, skipped or deleted.
+
+| Area | Tests |
+| --- | --- |
+| Station graph built from YAML, every element has a verification level | graph tests in `test_station_intelligence.py` |
+| Dijkstra routes, three profiles, step-free uses lifts only, lift status always unknown | route tests |
+| Platform statuses Confirmed / Reported / Scheduled / Predicted (5 of last 7) / Unknown, stale after 45 min, platform change | platform tests |
+| Feasibility classes, unknown platform → Cannot assess (no invented route), capping when not confirmed, recalculation after a change | feasibility tests + E2E 26, 27 |
+| Station API: input validation, unknown station, bad node, passenger platform entry checked against the journey | API tests + E2E 28 |
+| Unavailable message shown exactly | `test_...unavailable...` + E2E 29 |
+| Find mode: QR-style link, search, empty result | E2E 30 |
+| Copilot station questions (9, EN + HI); LLM cannot invent a platform | Copilot tests |
+| Screens agree (Journey/Disruption show the Decide outlook); What-If marks repeated results | E2E 31 |
+| Directions never say "towards Platform 16" while on Platform 16 | `test_platform_walk_never_says_towards_the_same_platform` |
+
+Bugs found and fixed: see [PRODUCT_AUDIT.md](PRODUCT_AUDIT.md) §2.
+
+Not tested here: any live platform feed (none exists publicly), real station geometry (schematic only), real lift status, real walking times.
+
+---
+
 ## Decision upgrade (24 Nov 2026)
 
 | Suite | Count | Result |

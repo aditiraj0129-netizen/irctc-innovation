@@ -25,6 +25,7 @@ import { DisruptionScreen } from "./screens/DisruptionScreen";
 import { CopilotScreen } from "./screens/CopilotScreen";
 import { SettingsScreen } from "./screens/SettingsScreen";
 import { DecideScreen } from "./screens/DecideScreen";
+import { StationFindScreen, StationJourneyScreen } from "./screens/StationScreen";
 
 function useHash(): string[] {
   const [h, setH] = useState(window.location.hash.slice(2) || "");
@@ -42,6 +43,7 @@ const MAIN = [
   { key: "home", icon: "⌂", label: "nav_home" },
   { key: "journeys", icon: "🗂", label: "nav_journeys" },
   { key: "copilot", icon: "💬", label: "nav_copilot" },
+  { key: "stations", icon: "🚉", label: "nav_stations" },
   { key: "offline", icon: "⤓", label: "nav_off_main" },
   { key: "settings", icon: "⚙", label: "nav_settings" },
 ] as const;
@@ -59,12 +61,15 @@ export default function App() {
   useEffect(() => { localStorageSet("lang", lang); document.documentElement.lang = lang; }, [lang]);
   useEffect(() => { applyA11y(loadA11y()); }, []);
 
-  const [screen, id, planId] = parts;
+  const [screen, rawId, planId] = parts;
+  const id = rawId?.split("?")[0];            // "station/<id>?at=PF4" (QR-style link)
   let body;
   if (screen === "journey" && id) body = <JourneyScreen id={id} lang={lang} />;
   else if (screen === "options" && id) body = <OptionsScreen id={id} lang={lang} />;
   else if (screen === "disruption" && id) body = <DisruptionScreen id={id} lang={lang} />;
   else if (screen === "decide" && id) body = <DecideScreen id={id} lang={lang} />;
+  else if (screen === "station" && id) body = <StationJourneyScreen id={id} lang={lang} />;
+  else if (screen === "stations") body = <StationFindScreen code={id ?? null} lang={lang} />;
   else if (screen === "howto" && id && planId) body = <HowToScreen id={id} planId={planId} lang={lang} />;
   else if (screen === "summary" && id) body = <SummaryScreen id={id} lang={lang} />;
   else if (screen === "presenter") body = <Presenter lang={lang} />;

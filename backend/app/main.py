@@ -15,6 +15,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi import Path as Path_
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
@@ -49,6 +50,11 @@ from app.knowledge.grounded import grounded_answer
 from app.core.cache import TTLCache
 from app.providers import build_providers
 from app.decide.decision import build_decision
+from app.station import graph as station_graph
+from app.station.feasibility import trusted_transfer_need
+from app.station.service import journey_station_view
+from app.station.platforms import PlatformObservation, PStatus, platform_info
+from app.station.route import Profile, RouteError, all_profiles, route as route_engine
 from app.predict.evaluation import EVALUATION_STATUS
 from app.predict.weather import IMDWeatherProvider, SimulatedWeatherProvider
 from app.recover.engine import DemoSampleBusProvider, NoBusProvider
@@ -87,6 +93,9 @@ class State:
         self.providers = build_providers(self.source)
         self.llm = self.providers.ai_model
         self.cache = TTLCache(ttl_seconds=float(os.getenv("CACHE_TTL_SECONDS", "5")))
+        # Platform observations added at run time (presenter platform changes, passenger-entered platforms).
+        # Kept in memory only and cleared on reset; no passenger location is ever stored.
+        self.platform_extra: dict[str, list] = {k: [] for k in self.scenarios}
         for k, sc in self.scenarios.items():
             seed_reports(self.community, k, sc.start_clock)
 
@@ -294,10 +303,16 @@ def _bus():
     return DemoSampleBusProvider() if (BUS_PROVIDER == "demo" and DEMO_MODE) else NoBusProvider()
 
 
+def _platform_obs(jid: str) -> list:
+    return [*_scenario(jid).platform_events, *S.platform_extra[jid]]
+
+
 def _decision(jid: str, priority: Priority):
     journey, events, now, profile = ctx(jid)
+    obs = _platform_obs(jid)
     return build_decision(journey, events, now, network_events=_scenario(jid).network_events, weather=_weather(jid),
-                          bus=_bus(), profile=profile, priority=priority)
+                          bus=_bus(), profile=profile, priority=priority,
+                          station_need=lambda j, seq: trusted_transfer_need(j, seq, obs, now, profile))
 
 
 @app.get("/api/journeys/{jid}/decision")
@@ -319,6 +334,126 @@ def get_prediction(jid: str):
 def get_recovery_options(jid: str, priority: Priority = Priority.TIME):
     """JourneyRecoveryEngine results: trains, nearby stations, unreserved, buses (demo samples), next day."""
     return _decision(jid, priority).recovery.model_dump(mode="json")
+
+
+# ---------- Station Intelligence (schematic maps, platforms, routes) ----------
+
+STATION_RE = r"^[A-Z]{2,5}$"
+NODE_RE = r"^[A-Z0-9_]{1,40}$"
+
+
+def _station_or_404(code: str):
+    st = station_graph.get(code)
+    if st is None:
+        raise HTTPException(404, "UNKNOWN_STATION")
+    return st
+
+
+def _station_summary(st) -> dict:
+    return {"code": st.code, "name": st.name, "kind": st.kind, "map_kind": st.map_kind, "platforms": st.platforms,
+            "platform_count": st.platform_count, "notes": st.notes}
+
+
+@app.get("/api/stations")
+def list_stations():
+    return {"stations": [_station_summary(st) for st in station_graph.stations().values()],
+            "label": "SCHEMATIC_MAPS_NOT_OFFICIAL"}
+
+
+@app.get("/api/stations/{code}")
+def get_station(code: str = Path_(pattern=STATION_RE)):
+    st = _station_or_404(code)
+    return {**_station_summary(st), "groups": st.groups, "nodes": [n.model_dump() for n in st.nodes.values()],
+            "edges": [e.model_dump() for e in st.edges], "facilities": st.facilities, "sources": st.sources}
+
+
+@app.get("/api/stations/{code}/facilities")
+def search_facilities(code: str = Path_(pattern=STATION_RE), q: str = Query("", max_length=60),
+                      type: str | None = Query(None, pattern=r"^[A-Z_]{2,30}$")):
+    st = _station_or_404(code)
+    words = [w for w in q.lower().split() if w]
+    out = []
+    for fid in st.facilities:
+        n = st.nodes[fid]
+        text = f"{n.label['en']} {n.label['hi']} {n.facility_type}".lower().replace("_", " ")
+        if (type is None or n.facility_type == type) and all(w in text for w in words):
+            out.append(n.model_dump())
+    return {"station": code, "results": out, "count": len(out)}
+
+
+@app.get("/api/stations/{code}/route")
+def station_route(code: str = Path_(pattern=STATION_RE), from_: str = Query(..., alias="from", pattern=NODE_RE),
+                  to: str = Query(..., pattern=NODE_RE), profile: Profile = Profile.FASTEST,
+                  speed: str = Query("normal", pattern="^(normal|slow)$")):
+    st = _station_or_404(code)
+    try:
+        main_route = route_engine(st, from_, to, profile, speed)
+        alts = [r for r in all_profiles(st, from_, to, speed) if r.path != main_route.path]
+    except RouteError as e:
+        raise HTTPException(422, str(e))
+    return {"route": main_route.model_dump(mode="json"), "alternatives": [r.model_dump(mode="json") for r in alts],
+            "location_note": "LOCATION_CHOSEN_BY_YOU_NOT_TRACKED"}
+
+
+@app.get("/api/journeys/{jid}/station")
+def journey_station(jid: str, at: str | None = Query(None, pattern=NODE_RE), profile: Profile | None = None,
+                    buffer: int = Query(5, ge=0, le=30), at_source: str = Query("MANUAL", pattern="^(MANUAL|LINK)$")):
+    """Station Navigator for a journey: arrival/departure platforms (with confidence), the walk, and feasibility."""
+    journey, events, now, prof = ctx(jid)
+    d = _decision(jid, Priority.TIME)
+    v = journey_station_view(journey, events, now, prof, _platform_obs(jid), d.prediction, at, profile, buffer, at_source)
+    code, conn, arrival = v["station"], v["connection"], v["arrival"]
+    st = station_graph.get(code)
+    return {"journey": journey_out(jid), "now": now.isoformat(), "station": code,
+            "station_summary": _station_summary(st) if st else None, "connection": conn.model_dump(mode="json") if conn else None,
+            "arrival_platform": arrival.model_dump(mode="json"), "decision_header": d.header,
+            "prediction": {k: (d.prediction.model_dump(mode="json")[k] if d.prediction else None)
+                           for k in ("arrival_early", "expected_arrival", "arrival_late", "current_delay_minutes",
+                                     "latest_data_at", "data_fresh", "outlook")},
+            "live_platform_source": "NOT_CONNECTED_SIMULATED_DEMO_ONLY"}
+
+
+class PassengerPlatformIn(BaseModel):
+    train_no: str = Field(pattern=r"^\d{5}$")
+    kind: str = Field(pattern="^(ARRIVAL|DEPARTURE)$")
+    platform: int = Field(ge=1, le=30)
+
+
+@app.post("/api/journeys/{jid}/station/platform")
+def passenger_platform(jid: str, body: PassengerPlatformIn):
+    """The passenger types the platform shown on the station board. Kept in memory, labelled as theirs."""
+    journey, events, now, _ = ctx(jid)
+    legs = {l.train_no: l for l in journey.legs}
+    if body.train_no not in legs:
+        raise HTTPException(422, "Train is not part of this journey")
+    leg = legs[body.train_no]
+    stn = leg.to_stn if body.kind == "ARRIVAL" else leg.from_stn
+    st = station_graph.get(stn)
+    if st is not None and body.platform not in st.platforms:
+        raise HTTPException(422, "INVALID_PLATFORM")
+    S.platform_extra[jid].append(PlatformObservation(train_no=body.train_no, station=stn, kind=body.kind,
+                                                     platform=body.platform, status=PStatus.REPORTED, observed_at=now,
+                                                     source="PASSENGER_FROM_STATION_BOARD"))
+    return {"ok": True, "station": stn, "platform": body.platform, "status": "REPORTED",
+            "source": "PASSENGER_FROM_STATION_BOARD"}
+
+
+class DemoPlatformIn(BaseModel):
+    train_no: str = Field(pattern=r"^\d{5}$")
+    station: str = Field(pattern=STATION_RE)
+    kind: str = Field(pattern="^(ARRIVAL|DEPARTURE)$")
+    platform: int | None = Field(default=None, ge=1, le=30)
+    status: PStatus = PStatus.CONFIRMED
+
+
+@app.post("/api/demo/{jid}/platform")
+def demo_platform(jid: str, body: DemoPlatformIn):
+    """Presenter: simulate a platform announcement or platform change (labelled SIMULATED)."""
+    _demo_only()
+    _scenario(jid)
+    o = PlatformObservation(**body.model_dump(), observed_at=S.clocks[jid].now(), source="SIMULATED_DEMO_PRESENTER")
+    S.platform_extra[jid].append(o)
+    return o.model_dump(mode="json")
 
 
 DASHBOARD_MAX = 10
@@ -468,7 +603,9 @@ def post_copilot(jid: str, body: CopilotIn):
                 "options": [o.model_dump(mode="json") for o in v.options[:3]]}
 
     tc = ToolContext(journey=journey, events=events, now=now, profile=profile, lang=body.lang, family=family,
-                     decide=lambda pr: _decision(jid, pr))
+                     decide=lambda pr: _decision(jid, pr),
+                     station=lambda: journey_station_view(journey, events, now, profile, _platform_obs(jid),
+                                                          _decision(jid, Priority.TIME).prediction))
     reply = run_copilot(body.message, tc, [h.model_dump() for h in body.history], S.llm)
     return reply.model_dump(mode="json")
 
@@ -547,6 +684,7 @@ def demo_reset(jid: str):
     _demo_only()
     sc = _scenario(jid)
     S.source.reset(jid)
+    S.platform_extra[jid] = []
     S.clocks[jid].set(sc.start_clock)
     S.store.clear_journey(jid)
     seed_reports(S.community, jid, sc.start_clock)

@@ -80,7 +80,7 @@ cd agla-kadam/backend
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-pytest                                  # expect: 279 passed
+pytest                                  # expect: 314 passed
 uvicorn app.main:app --reload           # API on http://localhost:8000  (docs: /docs)
 ```
 
@@ -101,8 +101,8 @@ FastAPI serves the built app at http://localhost:8000.
 
 | Suite | Command | What it covers |
 | --- | --- | --- |
-| Backend (279 tests: the original 119 + 73 upgrade + 39 next round + 48 decision engines) | `cd backend && pytest` | Refund slabs and exact boundary times, rule versions by date and train category, the TDR 3-hour boundary, invalid inputs, the disruption detector, route search vs Connection Scan, ranking, the Rights Clock, LLM failures (timeout, bad JSON, invented numbers, promise wording), the API, the demo scenarios; plus the twin, transfer classes, what-if, counterfactuals, resilience, wallet stages and claims, family groups, offline card, assistant intents (EN/HI/Hinglish, stale data, LLM failure), community reports (duplicates, expiry, conflicts, personal data, no effect on recommendations) and every new endpoint |
-| End-to-end (25 tests: the original 6 + 9 upgrade + 5 next round + 5 Decide screen) | `cd frontend && npm run build && npx playwright install chromium && npm run test:e2e` | Full passenger journeys on a phone-sized screen, Hindi toggle, invalid PNRs, stale data; plus twin → options → what-if, wallet claim + export, family group, offline card with the network switched off, Hinglish assistant question, community reports, accessibility needs, Hindi on the new screens, announced-rule refunds never shown as certain; next round: home dashboard, the Bhopal→Delhi→Chandigarh flow, Copilot What-If, Copilot prompt injection, accessibility settings |
+| Backend (314 tests: the original 119 + 73 upgrade + 39 next round + 48 decision engines + 35 station intelligence) | `cd backend && pytest` | Refund slabs and exact boundary times, rule versions by date and train category, the TDR 3-hour boundary, invalid inputs, the disruption detector, route search vs Connection Scan, ranking, the Rights Clock, LLM failures (timeout, bad JSON, invented numbers, promise wording), the API, the demo scenarios; plus the twin, transfer classes, what-if, counterfactuals, resilience, wallet stages and claims, family groups, offline card, assistant intents (EN/HI/Hinglish, stale data, LLM failure), community reports (duplicates, expiry, conflicts, personal data, no effect on recommendations) and every new endpoint |
+| End-to-end (31 tests: the original 6 + 9 upgrade + 5 next round + 5 Decide screen + 5 Station Navigator + 1 screens-agree) | `cd frontend && npm run build && npx playwright install chromium && npm run test:e2e` | Full passenger journeys on a phone-sized screen, Hindi toggle, invalid PNRs, stale data; plus twin → options → what-if, wallet claim + export, family group, offline card with the network switched off, Hinglish assistant question, community reports, accessibility needs, Hindi on the new screens, announced-rule refunds never shown as certain; next round: home dashboard, the Bhopal→Delhi→Chandigarh flow, Copilot What-If, Copilot prompt injection, accessibility settings |
 
 Full results: [docs/TEST_REPORT.md](docs/TEST_REPORT.md). API: [docs/API.md](docs/API.md). Architecture: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Demo, pitch and comparison: [docs/DEMO_AND_PITCH.md](docs/DEMO_AND_PITCH.md).
 
@@ -127,8 +127,21 @@ Press **Reset scenario** before each run.
 
 | 7–12 | `8100000008` … `8100000013` | **Decision demos** (open the **Decide** tab) | 08 recovering → *Tight, stay and watch*; 09 worsening + 2 late trains ahead → *High risk, stay but prepare, don't cancel (₹0 vs TDR ₹645 if approved)*; 10 fog → wider range; 11 missed → *book 90823, file TDR*; 12 cancel ₹660 now vs ₹0 after 01:30; 13 next day 90801 + Tatkal timing |
 
+| 13 | `8100000014` | **Station Navigator** (open the **Station** tab): BPL→NDLS (90721) then NDLS→CDG (90821, 19:45) | Platform 4 *Reported* → Platform 12 *Confirmed*; walk 6–11 min, 2 stairs; **Possible but tight**; "Prepare to get off" (43 min). Presenter (`#/presenter`): train 90821, NDLS, Departure, 16, *Send platform* → "changed from 12", recalculated. Pick *No stairs (lifts)* → **High risk**, lift status unknown. Also open **Stations** → New Delhi / Howrah / CSMT and search "exit", "washroom", "metro" |
+
 Extra edge cases to show from the presenter: **+1 h** with no new update → "Live data is out of date, so we won't advise".
 **Cancel train** → automatic full refund plus alternatives.
+
+
+### Station Navigator (new)
+
+Which platform, how to get there, can I make my connection, where is the exit/washroom/metro — for **New Delhi,
+Howrah and Mumbai CSMT** on **schematic** maps. Every platform has one status (Confirmed / Reported / Scheduled /
+Predicted / Unknown); with no live feed the app says "Live platform information is currently unavailable. Please
+verify station display boards and announcements." Lift status is always shown as unknown. No GPS: you pick your
+location or open a QR-style link (`#/stations/NDLS?at=PF2`). Docs: [STATION_INTELLIGENCE.md](docs/STATION_INTELLIGENCE.md),
+[STATION_NAVIGATION_ARCHITECTURE.md](docs/STATION_NAVIGATION_ARCHITECTURE.md), [STATION_DATA_SOURCES.md](docs/STATION_DATA_SOURCES.md),
+[PRODUCT_AUDIT.md](docs/PRODUCT_AUDIT.md).
 
 ## 4. How it is built
 

@@ -67,12 +67,17 @@ def _slack(dep: datetime, arr: datetime | None, need: int) -> int | None:
 
 
 def connection_risk(journey: Journey, first_seq: int, pred: DelayPrediction, events: list[Event], now: datetime,
-                    profile: PassengerProfile | None = None) -> ConnectionRisk:
+                    profile: PassengerProfile | None = None,
+                    need_override: tuple[int, list[str]] | None = None) -> ConnectionRisk:
     a = journey.legs[first_seq - 1]
     b = journey.legs[first_seq]
     stn = a.to_stn
     need = required_minutes(stn, profile, floor=journey.min_transfer_minutes)
     basis = [f"STATION_{stn}_{station_info(stn)['complexity']}", f"MIN_TRANSFER_{journey.min_transfer_minutes}"]
+    if need_override is not None:
+        # Both platforms are known (confirmed/reported): use the station walking route instead of the
+        # general station estimate.
+        need, basis = need_override[0], list(need_override[1])
     p = profile or PassengerProfile()
     if p.speed == "slow":
         basis.append("SLOW_WALKING")

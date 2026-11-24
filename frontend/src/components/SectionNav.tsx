@@ -2,8 +2,8 @@ import type { Lang } from "../api";
 import { t } from "../i18n";
 import { go } from "../router";
 
-const TABS = ["journey", "decide", "disruption", "options", "whatif", "wallet", "more"] as const;
-const LABEL: Record<string, string> = { journey: "nav_overview", decide: "nav_decide", disruption: "nav_disruption", options: "nav_options",
+const TABS = ["journey", "decide", "station", "disruption", "options", "whatif", "wallet", "more"] as const;
+const LABEL: Record<string, string> = { journey: "nav_overview", decide: "nav_decide", station: "nav_station", disruption: "nav_disruption", options: "nav_options",
   whatif: "nav_whatif", wallet: "nav_wallet", more: "nav_more" };
 
 // One navigation bar for every journey section, so the features feel like one product.

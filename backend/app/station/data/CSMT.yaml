@@ -1,0 +1,44 @@
+# Mumbai CSMT — SCHEMATIC station model. NOT an official map, NOT to scale.
+# Verified public facts: 18 platforms; terminus; platforms 1–7 suburban, 8–18 long-distance (mainline).
+# Reported: the long-distance section has its own entrance on the P. D'Mello Road side.
+# Platform pairing, concourse and FOB geometry, lifts and facility positions are ILLUSTRATIVE.
+code: CSMT
+name: {en: Mumbai CSMT, hi: मुंबई सीएसएमटी}
+kind: TERMINUS
+map_kind: SCHEMATIC
+platform_count: {value: 18, verification: VERIFIED_PUBLIC, source: S1}
+platform_length_m: 560
+group_spacing_m: 26
+platform_groups:
+  verification: ILLUSTRATIVE
+  groups: [[1, 2], [3, 4], [5, 6], [7], [8, 9], [10, 11], [12, 13], [14, 15], [16, 17], [18]]
+complexes:
+  - {id: SUB, name: {en: Suburban section (Platforms 1–7), hi: उपनगरीय भाग (प्लेटफॉर्म 1–7)}, groups: [0, 1, 2, 3], verification: VERIFIED_PUBLIC, source: S1}
+  - {id: MAIN, name: {en: Long-distance section (Platforms 8–18), hi: लंबी दूरी भाग (प्लेटफॉर्म 8–18)}, groups: [4, 5, 6, 7, 8, 9], verification: VERIFIED_PUBLIC, source: S1, gap_m: 60}
+complex_links:
+  - {a: SUB, b: MAIN, kind: WALK, distance_m: 150, name: {en: concourse link between the suburban and long-distance sections, hi: उपनगरीय और लंबी दूरी भाग को जोड़ने वाला रास्ता}, verification: ILLUSTRATIVE}
+fobs:
+  - {id: FOB_SUB, name: {en: Suburban foot overbridge, hi: उपनगरीय फुट ओवरब्रिज}, x_m: 250, groups: [0, 3], verification: ILLUSTRATIVE,
+     lifts_at: [], escalators_at: [0], position_verification: ILLUSTRATIVE}
+  - {id: FOB_MAIN, name: {en: Long-distance foot overbridge, hi: लंबी दूरी फुट ओवरब्रिज}, x_m: 280, groups: [4, 9], verification: ILLUSTRATIVE,
+     lifts_at: [4, 6, 9], escalators_at: [], position_verification: ILLUSTRATIVE}
+sides:
+  - {id: SUB_MAIN, complex: SUB, name: {en: Suburban section entrance/exit, hi: उपनगरीय भाग प्रवेश/निकास}, verification: ILLUSTRATIVE}
+  - {id: DMELLO, complex: MAIN, name: {en: "Long-distance entrance/exit (P. D'Mello Road side)", hi: "लंबी दूरी प्रवेश/निकास (पी. डिमेलो रोड साइड)"}, verification: REPORTED, source: S2}
+facilities:
+  - {id: TKT_SUB, type: TICKET_COUNTER, name: {en: Suburban ticket counters, hi: उपनगरीय टिकट काउंटर}, side: SUB_MAIN, verification: ILLUSTRATIVE}
+  - {id: ATVM_SUB, type: ATVM, name: {en: Ticket vending machines (suburban concourse), hi: टिकट वेंडिंग मशीन (उपनगरीय)}, concourse_group: 1, verification: ILLUSTRATIVE}
+  - {id: RES_MAIN, type: TICKET_COUNTER, name: {en: Reservation counters (long-distance section), hi: आरक्षण काउंटर (लंबी दूरी भाग)}, side: DMELLO, verification: ILLUSTRATIVE}
+  - {id: ENQ_MAIN, type: ENQUIRY, name: {en: Enquiry counter (long-distance concourse), hi: पूछताछ काउंटर (लंबी दूरी)}, concourse_group: 6, verification: ILLUSTRATIVE}
+  - {id: WAIT_MAIN, type: WAITING_ROOM, name: {en: Waiting room (long-distance concourse), hi: प्रतीक्षालय (लंबी दूरी)}, concourse_group: 7, verification: ILLUSTRATIVE}
+  - {id: WC_MAIN, type: WASHROOM, name: {en: Washroom (long-distance concourse), hi: शौचालय (लंबी दूरी)}, concourse_group: 5, verification: ILLUSTRATIVE}
+  - {id: WC_SUB, type: WASHROOM, name: {en: Washroom (suburban concourse), hi: शौचालय (उपनगरीय)}, concourse_group: 2, verification: ILLUSTRATIVE}
+  - {id: WATER_MAIN, type: DRINKING_WATER, name: {en: Drinking water (long-distance concourse), hi: पीने का पानी (लंबी दूरी)}, concourse_group: 8, verification: ILLUSTRATIVE}
+  - {id: FOOD_MAIN, type: FOOD, name: {en: Food stall (long-distance concourse), hi: खाने का स्टॉल (लंबी दूरी)}, concourse_group: 6, verification: ILLUSTRATIVE}
+  - {id: CLOAK_MAIN, type: CLOAKROOM, name: {en: Cloakroom (long-distance section), hi: क्लॉकरूम (लंबी दूरी)}, side: DMELLO, verification: ILLUSTRATIVE}
+  - {id: HELP_MAIN, type: HELP_DESK, name: {en: Help desk (long-distance concourse), hi: सहायता डेस्क (लंबी दूरी)}, concourse_group: 5, verification: ILLUSTRATIVE}
+  - {id: RPF_SUB, type: RPF, name: {en: RPF help point (suburban concourse), hi: RPF सहायता (उपनगरीय)}, concourse_group: 0, verification: ILLUSTRATIVE}
+  - {id: PARK_MAIN, type: PARKING, name: {en: Taxi / pickup (D'Mello Road side), hi: टैक्सी / पिकअप (डिमेलो रोड साइड)}, side: DMELLO, verification: ILLUSTRATIVE}
+sources:
+  S1: {title: "erail.in / Wikipedia — CSMT has 18 platforms: 7 suburban, 8–18 for intercity trains", url: "https://erail.in/info/c-shivaji-maharaj-t-railway-station-CSMT/29924", checked: 2026-11-24}
+  S2: {title: "IndianRailYatra blog (2026) — long-distance platforms 8–18 have a separate entrance on the P. D'Mello Road side (secondary source)", url: "https://codedoceblogs.pages.dev/IndianRailYatra.Blog/stations--mumbai-cst-railway-station-guide", checked: 2026-11-24}

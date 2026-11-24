@@ -54,7 +54,7 @@ export function WhatIfScreen({ id, lang }: { id: string; lang: Lang }) {
       {data && (
         <ul className="plans" data-testid="whatif-outcomes">
           {data.outcomes.map((o) => (
-            <OutcomeCard key={o.id} o={o} lang={lang} delay={delay} wait={wait}
+            <OutcomeCard key={o.id} o={o} lang={lang} delay={delay} wait={wait} best={data.outcomes.find((x) => x.id === "BEST_NOW")}
               picked={chosen.some((c) => c.id === o.id)} onPick={() => toggle(o.id)} />
           ))}
         </ul>
@@ -93,7 +93,9 @@ function Compare({ a, b, lang, titleOf }: { a: Outcome; b: Outcome; lang: Lang; 
   );
 }
 
-function OutcomeCard({ o, lang, delay, wait, picked, onPick }: { o: Outcome; lang: Lang; delay: number; wait: number; picked: boolean; onPick: () => void }) {
+function OutcomeCard({ o, lang, delay, wait, picked, onPick, best }: { o: Outcome; lang: Lang; delay: number; wait: number; picked: boolean; onPick: () => void; best?: Outcome }) {
+  const sameAsBest = !!best && o.id !== "BEST_NOW" && o.applicable && o.plan_id === best.plan_id && o.arrival === best.arrival &&
+    o.money_back_paise === best.money_back_paise;
   const title = o.id === "WAIT_30" ? `${t(lang, "sc_WAIT_30")} (${duration(wait, lang)})`
     : o.id === "DELAY_GROWS" ? `${t(lang, "sc_DELAY_GROWS")} (+${duration(delay, lang)})` : tc(lang, "sc_", o.id);
   if (!o.applicable) {
@@ -110,6 +112,7 @@ function OutcomeCard({ o, lang, delay, wait, picked, onPick }: { o: Outcome; lan
         <h3>{title}</h3>
         <span className={`pill conf-${o.confidence}`}>{t(lang, "conf_" + o.confidence)}</span>
       </div>
+      {sameAsBest && <p className="small note" data-testid="wi-same">{t(lang, "wi_same_as_best")}</p>}
       <button className="link small" aria-pressed={picked} data-testid={`wi-pick-${o.id}`} onClick={onPick}>
         {picked ? `✓ ${t(lang, "wi_picked")}` : t(lang, "wi_pick")}
       </button>

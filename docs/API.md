@@ -64,3 +64,18 @@ Every `/api/...` path also works as `/api/v1/...` (same handler). `GET /api/heal
 | POST | `/api/demo/{jid}/events` | now also accepts an optional `station` (2–5 capital letters) so the delay engine sees station-by-station readings |
 
 Environment: `WEATHER_PROVIDER` (`simulated` in demo mode, otherwise `imd`, which reports "unavailable" until IMD access is granted), `BUS_PROVIDER` (`demo` samples in demo mode, otherwise `off`).
+
+
+## Station endpoints (Station Navigator)
+
+All maps are schematic (`label: SCHEMATIC_MAPS_NOT_OFFICIAL`). Every `/api/` path also answers at `/api/v1/`.
+
+| Method | Path | Returns / notes |
+| --- | --- | --- |
+| GET | `/api/stations` | Mapped stations (NDLS, HWH, CSMT): code, names, kind, platforms, platform count with source |
+| GET | `/api/stations/{code}` | Full schematic graph: nodes, edges (lift `status: UNKNOWN`, escalator `direction: NOT_VERIFIED`), verification levels, sources. 404 `UNKNOWN_STATION` |
+| GET | `/api/stations/{code}/facilities?q=&type=` | Facility search (`q` ≤ 60 chars, `type` e.g. `WASHROOM`, `EXIT`, `METRO`) |
+| GET | `/api/stations/{code}/route?from=&to=&profile=fastest\|step_free\|fewer_levels&speed=normal\|slow` | Route: time range, distance, stairs/lifts/escalators, steps, alternatives, `confidence: SCHEMATIC_DEMO`. 422 on unknown node |
+| GET | `/api/journeys/{jid}/station?at=&profile=&buffer=0..30&at_source=MANUAL\|LINK` | Station view for the change station: arrival/departure platform info (status, source, age, stale, changed_from, message), route, connection (result, reasons with available/required/buffer, capped, prepare_to_alight) |
+| POST | `/api/journeys/{jid}/station/platform` | Body `{train_no, kind: ARRIVAL\|DEPARTURE, platform: 1..30}` — platform the passenger read on the board. Checked against the journey's trains and the station's platforms. Stored as `REPORTED`, source `PASSENGER_FROM_STATION_BOARD` |
+| POST | `/api/demo/{jid}/platform` | Presenter: `{train_no, station, kind, platform, status}` simulates a platform event / change (needs `X-Demo-Token` when set) |
